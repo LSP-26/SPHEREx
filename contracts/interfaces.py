@@ -1,10 +1,11 @@
 """All I/O sits behind these. Each has a Tier 0 and a Tier 1 implementation."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from .arrays import Stamp
-from .models import FrameRef, SkyPosition
+from .models import FlipbookRequest, FrameRef, SkyPosition
 
 
 @runtime_checkable
@@ -34,3 +35,17 @@ class Lookups(Protocol):
 class Cache(Protocol):
     async def get(self, key: str) -> bytes | None: ...
     async def put(self, key: str, value: bytes) -> None: ...
+
+
+@dataclass(frozen=True)
+class Rendered:
+    """An 8-bit PNG. The float arrays stay on the server (stretch changes re-render)."""
+    png: bytes
+    width: int
+    height: int
+
+
+@runtime_checkable
+class Renderer(Protocol):
+    def render_png(self, stamp: Stamp, req: FlipbookRequest) -> Rendered:
+        """Pure: arrays in, PNG bytes out. Real version: clean, stretch (P3.2)."""
