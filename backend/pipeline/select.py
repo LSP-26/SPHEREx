@@ -1,0 +1,148 @@
+"""P4.1: group frames into visits and pick the preview set. Pure: no network, no disk.
+
+A "visit" is one pass of SPHEREx over the target (frames close together in time).
+The preview shows one wavelength-matched frame per (visit, detector), so frames at
+different wavelengths are never blinked against each other.
+"""
+from __future__ import annotations
+
+import math
+from collections import defaultdict
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from typing import TypeVar
+
+from contracts import FlipbookRequest, FrameRef, Visit
+
+T = TypeVar("T")
+
+DEFAULT_GAP_DAYS = 30.0     # plan: start near 30 d, then check the gap histogram (V1.4)
+MATCH_TOLERANCE = 0.5       # resolution elements (plan A4, tau)
+MIN_JUMP_RATIO = 5.0
+MIN_VISIT_GAP_DAYS = 2.0    # a gap smaller than this is never a split between visits
+
+
+@dataclass(frozen=True)
+class Selection:
+    visits_total: int                    # every visit observed ('n' in 'k of n visits')
+    visits_shown: int                    # visits in the preview ('k')
+    chosen: list[tuple[FrameRef, int]]   # (frame, visit_index), in time order
+
+
+Selector = Callable[[list[FrameRef], FlipbookRequest], Selection]
+LambdaOf = Callable[[FrameRef], "float | None"]
+
+
+def even_subsample(items: Sequence[T], k: int) -> list[T]:
+    """k items spread evenly over the sequence, always including first and last."""
+    n = len(items)
+    if k >= n:
+        return list(items)
+    if k <= 1:
+        return [items[0]]
+    return [items[i] for i in sorted({round(j * (n - 1) / (k - 1)) for j in range(k)})]
+
+
+def simple_select(frames: list[FrameRef], req: FlipbookRequest) -> Selection:
+    """Fallback: every frame is its own 'visit'. Used by the job until O2.2 wires in P4.1."""
+    ordered = sorted(frames, key=lambda f: f.t_start)
+    pairs = even_subsample(list(enumerate(ordered)), req.preview_cap)
+    return Selection(visits_total=len(ordered), visits_shown=len(pairs),
+                     chosen=[(f, i) for i, f in pairs])
+
+
+def resolution_element(lam_um: float) -> float:
+    """lambda / R. R is about 40 below 3.82 um and about 120 above."""
+    return lam_um / (40.0 if lam_um < 3.82 else 120.0)
+
+
+# ------------------------------------------------------------------ visits
+def choose_gap(frames: Sequence[FrameRef], default: float = DEFAULT_GAP_DAYS) -> float:
+    """Pick the visit gap from this position's own gap histogram: the biggest jump between
+    sorted gaps. Falls back to the default when there is no clear jump. A heuristic: V1.4
+    checks it on 10 real positions."""
+    ts = sorted(f.t_start for f in frames)
+    gaps = sorted(max(b - a, 1e-3) for a, b in zip(ts, ts[1:], strict=False))
+    if len(gaps) < 4:
+        return default
+    best_ratio, best = 1.0, None
+    for lo, hi in zip(gaps, gaps[1:], strict=False):
+        if hi >= MIN_VISIT_GAP_DAYS and hi / lo > best_ratio:
+            best_ratio, best = hi / lo, math.sqrt(lo * hi)
+    return best if best is not None and best_ratio >= MIN_JUMP_RATIO else default
+
+
+def cluster_visits(frames: Sequence[FrameRef], gap_days: float | None = None) -> list[Visit]:
+    """Split frames (sorted by time) wherever the gap to the previous frame exceeds gap_days."""
+    if not frames:
+        return []
+    ordered = sorted(frames, key=lambda f: f.t_start)
+    gap = gap_days if gap_days is not None else choose_gap(ordered)
+    groups: list[list[FrameRef]] = [[ordered[0]]]
+    latest_end = ordered[0].t_end
+    for f in ordered[1:]:
+        if f.t_start - latest_end > gap:
+            groups.append([])
+            latest_end = f.t_end
+        groups[-1].append(f)
+        latest_end = max(latest_end, f.t_end)
+    return [Visit(visit_index=i, t_start=g[0].t_start, t_end=max(f.t_end for f in g),
+                  frame_ids=[f.frame_id for f in g]) for i, g in enumerate(groups)]
+
+
+# ------------------------------------------------------------------ wavelength matching
+def _reference_lambda(rows: list[tuple[int, FrameRef, float]]) -> float:
+    """The wavelength that the most visits have a frame near (ties: shortest wavelength)."""
+    best_count, best_lam = -1, 0.0
+    for lam in sorted({r[2] for r in rows}):
+        tol = MATCH_TOLERANCE * resolution_element(lam)
+        count = len({v for v, _, other in rows if abs(other - lam) <= tol})
+        if count > best_count:
+            best_count, best_lam = count, lam
+    return best_lam
+
+
+def make_selector(lambda_of: LambdaOf | None = None, gap_days: float | None = None) -> Selector:
+    """Build the preview selector. lambda_of(frame) is the wavelength at the target (D5.1).
+    Without it, we cannot match wavelengths, so we take the middle frame of each
+    (visit, detector). That fallback is NOT wavelength-matched: the UI should say so."""
+
+    def select(frames: list[FrameRef], req: FlipbookRequest) -> Selection:
+        by_id = {f.frame_id: f for f in frames}
+        visits = cluster_visits(frames, gap_days)
+        rows_by_det: dict[int, list[tuple[int, FrameRef, float | None]]] = defaultdict(list)
+        for v in visits:
+            for fid in v.frame_ids:
+                f = by_id[fid]
+                rows_by_det[f.detector].append(
+                    (v.visit_index, f, lambda_of(f) if lambda_of else None))
+
+        picks: dict[tuple[int, int], FrameRef] = {}  # (visit, detector) -> frame
+        for det, rows in rows_by_det.items():
+            if all(lam is not None for _, _, lam in rows):
+                known = [(v, f, lam) for v, f, lam in rows if lam is not None]
+                ref = _reference_lambda(known)
+                tol = MATCH_TOLERANCE * resolution_element(ref)
+                best: dict[int, tuple[float, FrameRef]] = {}
+                for v, f, lam in known:
+                    d = abs(lam - ref)
+                    if d <= tol and (v not in best or d < best[v][0]):
+                        best[v] = (d, f)
+                for v, (_, f) in best.items():
+                    picks[(v, det)] = f
+            else:  # wavelength unknown: middle frame in time
+                per_visit: dict[int, list[FrameRef]] = defaultdict(list)
+                for v, f, _ in rows:
+                    per_visit[v].append(f)
+                for v, fs in per_visit.items():
+                    picks[(v, det)] = fs[len(fs) // 2]
+
+        have = sorted({v for v, _ in picks})
+        n_det = max(1, len({d for _, d in picks}))
+        shown = set(even_subsample(have, max(1, req.preview_cap // n_det)))
+        chosen = sorted(((f, v) for (v, _), f in picks.items() if v in shown),
+                        key=lambda fv: (fv[0].t_mid, fv[0].detector))
+        chosen = even_subsample(chosen, req.preview_cap)
+        return Selection(visits_total=len(visits), visits_shown=len(shown), chosen=chosen)
+
+    return select

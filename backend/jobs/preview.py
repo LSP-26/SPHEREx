@@ -13,10 +13,10 @@ import logging
 import math
 import time
 import uuid
-from collections.abc import AsyncIterator, Callable
-from dataclasses import dataclass
+from collections.abc import AsyncIterator
 
 from backend.adapters.cache import UpstreamError
+from backend.pipeline.select import Selection, Selector, simple_select
 from contracts import (
     DoneEvent,
     ErrorCode,
@@ -45,29 +45,6 @@ log = logging.getLogger(__name__)
 PIXEL_SCALE_ARCSEC = 6.15
 BYTES_PER_ROW_PLANE = 2040 * 4
 PLANES = 4  # IMAGE, FLAGS, VARIANCE, ZODI
-
-
-@dataclass(frozen=True)
-class Selection:
-    visits_total: int
-    chosen: list[tuple[FrameRef, int]]  # (frame, visit_index), in time order
-
-
-Selector = Callable[[list[FrameRef], FlipbookRequest], Selection]
-
-
-def simple_select(frames: list[FrameRef], req: FlipbookRequest) -> Selection:
-    """STUB until P4.1: every frame is its own 'visit', evenly subsampled in time to the cap.
-    P4.1 replaces this with gap clustering and one wavelength-matched frame per visit x detector."""
-    frames = sorted(frames, key=lambda f: f.t_start)
-    n, cap = len(frames), req.preview_cap
-    if n <= cap:
-        idx = list(range(n))
-    elif cap == 1:
-        idx = [0]
-    else:
-        idx = sorted({round(i * (n - 1) / (cap - 1)) for i in range(cap)})
-    return Selection(visits_total=n, chosen=[(frames[i], i) for i in idx])
 
 
 def stamp_size_px(req: FlipbookRequest) -> int:
@@ -111,7 +88,7 @@ async def run_preview(
     if cancel is not None and cancel.is_set():
         yield _cancelled()
         return
-    selection = select(frames, req) if frames else Selection(0, [])
+    selection = select(frames, req) if frames else Selection(0, 0, [])
     if not selection.chosen:
         yield ErrorEvent(code=ErrorCode.NO_COVERAGE, retryable=False,
                          message="SPHEREx has not observed this position yet, "
@@ -158,7 +135,7 @@ async def run_preview(
     n_ok, failures = 0, []
     try:
         yield PlanEvent(job_id=job_id, n_slots=total, n_visits_total=selection.visits_total,
-                        n_visits_shown=total,
+                        n_visits_shown=selection.visits_shown,
                         est_bytes=total * PLANES * size * BYTES_PER_ROW_PLANE)
         yield ProgressEvent(done=0, total=total, stage=Stage.PREVIEW)
         while pending:
