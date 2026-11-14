@@ -1,0 +1,13 @@
+# data files stay out of the repo (fixtures use .npz and are committed)
+*.fits
+*.fits.gz
+*.npy
+*.parquet
+.cache/
+__pycache__/
+.venv/
+node_modules/
+dist/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
