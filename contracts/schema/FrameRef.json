@@ -1,5 +1,52 @@
 {
   "$defs": {
+    "Compression": {
+      "additionalProperties": false,
+      "description": "A plane stored with FITS tiled-image compression: a BINTABLE with one row per image row,\neach row an (n_bytes, heap_offset) descriptor, and the compressed rows in a heap after the\ntable (pipeline v27 stores FLAGS this way). Only whole-row RICE_1 tiles are supported.",
+      "properties": {
+        "type": {
+          "const": "RICE_1",
+          "default": "RICE_1",
+          "title": "Type",
+          "type": "string"
+        },
+        "row_bytes": {
+          "description": "bytes per table row: 8 for 1PB, 16 for 1QB",
+          "exclusiveMinimum": 0,
+          "title": "Row Bytes",
+          "type": "integer"
+        },
+        "heap_offset": {
+          "description": "byte offset in the file where the heap starts",
+          "minimum": 0,
+          "title": "Heap Offset",
+          "type": "integer"
+        },
+        "heap_bytes": {
+          "description": "size of the heap in bytes",
+          "exclusiveMinimum": 0,
+          "title": "Heap Bytes",
+          "type": "integer"
+        },
+        "blocksize": {
+          "default": 32,
+          "title": "Blocksize",
+          "type": "integer"
+        },
+        "bytepix": {
+          "default": 4,
+          "title": "Bytepix",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "row_bytes",
+        "heap_offset",
+        "heap_bytes"
+      ],
+      "title": "Compression",
+      "type": "object"
+    },
     "Plane": {
       "enum": [
         "IMAGE",
@@ -15,12 +62,13 @@
       "description": "Where one plane's pixels start in the FITS file, and how to decode them.",
       "properties": {
         "offset": {
-          "description": "byte offset of the first pixel of row 0",
+          "description": "byte offset of the first pixel of row 0 (compressed: of the first table row)",
           "minimum": 0,
           "title": "Offset",
           "type": "integer"
         },
         "bitpix": {
+          "description": "BITPIX of the image (compressed: ZBITPIX)",
           "title": "Bitpix",
           "type": "integer"
         },
@@ -33,6 +81,17 @@
           "default": 1.0,
           "title": "Bscale",
           "type": "number"
+        },
+        "compression": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Compression"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

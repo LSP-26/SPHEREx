@@ -24,7 +24,8 @@ import httpx
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from backend.adapters.fits_layout import HttpRangeSource, read_header, read_layout
+from backend.adapters.fits_layout import HttpRangeSource
+from backend.adapters.frame_layout import read_frame_layout, spec_to_list
 from backend.adapters.wcs_util import _ALT, celestial_wcs
 
 TAP = "https://irsa.ipac.caltech.edu/TAP/sync"
@@ -72,9 +73,13 @@ def parse_detector(name: str) -> int | None:
 
 # ------------------------------------------------------------------ header pass
 def _retry(fn: Callable, attempts: int = 3):
+    """Retry on network trouble. A ValueError means the file itself is in a format we cannot
+    read, so retrying cannot help and it is raised at once."""
     for i in range(attempts):
         try:
             return fn()
+        except ValueError:
+            raise
         except Exception:
             if i == attempts - 1:
                 raise
@@ -82,19 +87,16 @@ def _retry(fn: Callable, attempts: int = 3):
 
 
 def read_frame_record(row: dict) -> dict:
-    """One frame: range-read the layout and the IMAGE header, return a catalogue row."""
+    """One frame: walk its headers (4 range requests) and return a catalogue row."""
     key = key_from_uri(row["uri"])
     name = key.rsplit("/", 1)[-1]
     src = HttpRangeSource(S3_HTTPS + key)
-    layout = {h.extname: h for h in _retry(lambda: read_layout(src))}
-    missing = [p for p in PLANES if p not in layout]
-    if missing:
-        raise ValueError(f"{name}: missing planes {missing}")
-    hdr = _retry(lambda: read_header(src, layout["IMAGE"]))
+    layout = _retry(lambda: read_frame_layout(src))
+    hdr = layout.image_header
+    ny, nx = layout.shape
     wcs = {k: hdr[k] for k in hdr
            if k.startswith(WCS_PREFIXES) and not _ALT.match(k)
            and isinstance(hdr[k], (str, int, float)) and not isinstance(hdr[k], bool)}
-    ny, nx = layout["IMAGE"].shape
     ra, dec = (float(v) for v in celestial_wcs(wcs).all_pix2world(
         [[(nx - 1) / 2, (ny - 1) / 2]], 0)[0])
     det = None
@@ -105,15 +107,14 @@ def read_frame_record(row: dict) -> dict:
         det = parse_detector(name)
     if det is None:
         raise ValueError(f"{name}: cannot work out the detector")
-    planes = {p: [layout[p].data_start, layout[p].bitpix, layout[p].bzero, layout[p].bscale]
-              for p in PLANES}
     return {
         "frame_id": name, "detector": det, "obsid": str(hdr.get("OBSID", "")) or None,
         "t_start": float(row["t0"]), "t_end": float(row["t1"]),
         "release": parse_release(key), "version": parse_version(name),
         "uri": f"s3://{BUCKET}/{key}", "ra_c": ra % 360, "dec_c": dec,
         "naxis1": nx, "naxis2": ny,
-        "wcs_json": json.dumps(wcs), "planes_json": json.dumps(planes),
+        "wcs_json": json.dumps(wcs),
+        "planes_json": json.dumps({p.value: spec_to_list(s) for p, s in layout.planes.items()}),
     }
 
 

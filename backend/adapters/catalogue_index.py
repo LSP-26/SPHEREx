@@ -17,8 +17,9 @@ from pathlib import Path
 import duckdb
 import numpy as np
 
+from backend.adapters.frame_layout import spec_from_list
 from backend.adapters.wcs_util import celestial_wcs
-from contracts import FrameRef, Plane, PlaneSpec, SkyPosition
+from contracts import FrameRef, Plane, SkyPosition
 
 CONE_DEG = 2.6   # frame half-diagonal is 2.46 degrees (2040 px x 6.15 arcsec, corner to centre)
 
@@ -74,8 +75,7 @@ class CatalogueFrameIndex:
             nx, ny = rec["naxis1"], rec["naxis2"]
             if not (margin_px <= x <= nx - margin_px and margin_px <= y <= ny - margin_px):
                 continue
-            planes = {Plane(k): PlaneSpec(offset=int(v[0]), bitpix=int(v[1]),
-                                          bzero=float(v[2]), bscale=float(v[3]))
+            planes = {Plane(k): spec_from_list(v)
                       for k, v in json.loads(rec["planes_json"]).items()}
             out.append(FrameRef(
                 frame_id=rec["frame_id"], detector=rec["detector"], obsid=rec["obsid"],

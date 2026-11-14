@@ -6,7 +6,7 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-CONTRACT_VERSION = "0.1.1"
+CONTRACT_VERSION = "0.2.0"
 
 
 class _M(BaseModel):
@@ -62,12 +62,26 @@ class FlipbookRequest(_M):
 
 
 # ---------------------------------------------------------------- frames
+class Compression(_M):
+    """A plane stored with FITS tiled-image compression: a BINTABLE with one row per image row,
+    each row an (n_bytes, heap_offset) descriptor, and the compressed rows in a heap after the
+    table (pipeline v27 stores FLAGS this way). Only whole-row RICE_1 tiles are supported."""
+    type: Literal["RICE_1"] = "RICE_1"
+    row_bytes: int = Field(gt=0, description="bytes per table row: 8 for 1PB, 16 for 1QB")
+    heap_offset: int = Field(ge=0, description="byte offset in the file where the heap starts")
+    heap_bytes: int = Field(gt=0, description="size of the heap in bytes")
+    blocksize: int = 32
+    bytepix: int = 4
+
+
 class PlaneSpec(_M):
     """Where one plane's pixels start in the FITS file, and how to decode them."""
-    offset: int = Field(ge=0, description="byte offset of the first pixel of row 0")
-    bitpix: int
+    offset: int = Field(ge=0, description="byte offset of the first pixel of row 0 "
+                                          "(compressed: of the first table row)")
+    bitpix: int = Field(description="BITPIX of the image (compressed: ZBITPIX)")
     bzero: float = 0.0
     bscale: float = 1.0
+    compression: Compression | None = None
 
 
 class FrameRef(_M):

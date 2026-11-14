@@ -13,12 +13,26 @@ import httpx
 import numpy as np
 
 from backend.adapters.cache import RETRY_STATUS, HostLimiter, RetryableError, UpstreamError
+from backend.adapters.compressed_plane import (
+    decode_rows as decode_compressed_rows,
+)
+from backend.adapters.compressed_plane import (
+    parse_descriptors,
+    plan_reads,
+)
 from backend.adapters.fits_layout import RangeNotSupported, decode_rows
-from contracts import ErrorCode, FrameRef, Plane, SkyPosition, Stamp
+from backend.adapters.frame_layout import EXPECTED_BITPIX
+from contracts import ErrorCode, FrameRef, Plane, PlaneSpec, SkyPosition, Stamp
 
 
 class OutOfFrame(ValueError):
     """The target is not on this frame (the frame index should have filtered it out)."""
+
+
+class StaleCatalogueRecord(ValueError):
+    """The catalogue record describes a plane differently from what this reader can decode.
+    Catalogues built before contract v0.2.0 recorded a compressed FLAGS table as BITPIX 8, and
+    reading it as pixels would give garbage without any error. Rebuild the catalogue."""
 
 
 def https_url(uri: str, region: str = "us-east-1") -> str:
@@ -84,9 +98,32 @@ class S3StampSource:
                             f"A SPHEREx frame is not available (HTTP {r.status_code}).",
                             retryable=False)
 
+    async def _compressed_rows(self, url: str, frame: FrameRef, spec: PlaneSpec,
+                               y0: int, y1: int) -> np.ndarray:
+        """Rows y0:y1 of a tile-compressed plane: the descriptors, then the heap bytes they
+        point at (usually one range), then decoding in a worker thread."""
+        comp = spec.compression
+        assert comp is not None
+        raw = await self.limiter.run(url, lambda: self._get_range(
+            url, spec.offset + y0 * comp.row_bytes, (y1 - y0) * comp.row_bytes))
+        tiles = parse_descriptors(raw, comp)
+        ranges = plan_reads(tiles)
+        parts = await asyncio.gather(*[
+            self.limiter.run(url, lambda s=s, n=n: self._get_range(url, comp.heap_offset + s, n))
+            for s, n in ranges])
+        return await asyncio.to_thread(decode_compressed_rows, comp, frame.naxis1, tiles,
+                                       ranges, list(parts), spec.bzero, spec.bscale)
+
     async def _band(self, url: str, frame: FrameRef, plane: Plane, y0: int, y1: int,
                     x0: int, x1: int) -> np.ndarray:
         spec = frame.planes[plane]  # type: ignore[index]
+        if spec.bitpix != EXPECTED_BITPIX[plane]:
+            raise StaleCatalogueRecord(
+                f"{frame.frame_id}: the catalogue says {plane.value} has BITPIX {spec.bitpix}, "
+                f"expected {EXPECTED_BITPIX[plane]}. This record predates compressed FLAGS "
+                "support (contract v0.2.0): rebuild the catalogue.")
+        if spec.compression is not None:
+            return (await self._compressed_rows(url, frame, spec, y0, y1))[:, x0:x1]
         row_bytes = frame.naxis1 * abs(spec.bitpix) // 8
         start, length = spec.offset + y0 * row_bytes, (y1 - y0) * row_bytes
         raw = await self.limiter.run(url, lambda: self._get_range(url, start, length))
