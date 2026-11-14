@@ -1,0 +1,111 @@
+{
+  "$defs": {
+    "ViewMode": {
+      "enum": [
+        "sky",
+        "mover"
+      ],
+      "title": "ViewMode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Everything that defines a flipbook. All fields also live in the URL query string.",
+  "properties": {
+    "ra": {
+      "exclusiveMaximum": 360.0,
+      "minimum": 0.0,
+      "title": "Ra",
+      "type": "number"
+    },
+    "dec": {
+      "maximum": 90.0,
+      "minimum": -90.0,
+      "title": "Dec",
+      "type": "number"
+    },
+    "fov_arcmin": {
+      "default": 5.0,
+      "exclusiveMinimum": 0.0,
+      "maximum": 120.0,
+      "title": "Fov Arcmin",
+      "type": "number"
+    },
+    "view": {
+      "$ref": "#/$defs/ViewMode",
+      "default": "sky"
+    },
+    "detector": {
+      "anyOf": [
+        {
+          "maximum": 6,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "None = merged colour",
+      "title": "Detector"
+    },
+    "lambda_min_um": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lambda Min Um"
+    },
+    "lambda_max_um": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lambda Max Um"
+    },
+    "preview_cap": {
+      "default": 36,
+      "maximum": 200,
+      "minimum": 1,
+      "title": "Preview Cap",
+      "type": "integer"
+    },
+    "use_zodi": {
+      "default": true,
+      "title": "Use Zodi",
+      "type": "boolean"
+    },
+    "release": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "None = latest",
+      "title": "Release"
+    }
+  },
+  "required": [
+    "ra",
+    "dec"
+  ],
+  "title": "FlipbookRequest",
+  "type": "object"
+}

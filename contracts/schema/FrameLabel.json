@@ -1,0 +1,61 @@
+{
+  "additionalProperties": false,
+  "description": "What the UI prints under a frame: wavelength, date, provenance.",
+  "properties": {
+    "frame_id": {
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "detector": {
+      "title": "Detector",
+      "type": "integer"
+    },
+    "lambda_um": {
+      "title": "Lambda Um",
+      "type": "number"
+    },
+    "channel": {
+      "anyOf": [
+        {
+          "maximum": 17,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Channel"
+    },
+    "t_mid_mjd": {
+      "title": "T Mid Mjd",
+      "type": "number"
+    },
+    "release": {
+      "title": "Release",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "flags_summary": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Flags Summary",
+      "type": "array"
+    }
+  },
+  "required": [
+    "frame_id",
+    "detector",
+    "lambda_um",
+    "t_mid_mjd",
+    "release",
+    "version"
+  ],
+  "title": "FrameLabel",
+  "type": "object"
+}

@@ -1,0 +1,334 @@
+{
+  "$defs": {
+    "DoneEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "done",
+          "default": "done",
+          "title": "Type",
+          "type": "string"
+        },
+        "n_frames": {
+          "title": "N Frames",
+          "type": "integer"
+        },
+        "elapsed_s": {
+          "title": "Elapsed S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "n_frames",
+        "elapsed_s"
+      ],
+      "title": "DoneEvent",
+      "type": "object"
+    },
+    "ErrorCode": {
+      "enum": [
+        "bad_coords",
+        "no_coverage",
+        "irsa_busy",
+        "irsa_down",
+        "s3_down",
+        "timeout",
+        "cancelled",
+        "internal"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "ErrorEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "error",
+          "default": "error",
+          "title": "Type",
+          "type": "string"
+        },
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "ErrorEvent",
+      "type": "object"
+    },
+    "FrameEvent": {
+      "additionalProperties": false,
+      "description": "A rendered frame. A REFINED event with the same slot replaces the PREVIEW one.",
+      "properties": {
+        "type": {
+          "const": "frame",
+          "default": "frame",
+          "title": "Type",
+          "type": "string"
+        },
+        "slot": {
+          "title": "Slot",
+          "type": "integer"
+        },
+        "stage": {
+          "$ref": "#/$defs/Stage"
+        },
+        "png_url": {
+          "title": "Png Url",
+          "type": "string"
+        },
+        "width": {
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "title": "Height",
+          "type": "integer"
+        },
+        "label": {
+          "$ref": "#/$defs/FrameLabel"
+        },
+        "visit_index": {
+          "title": "Visit Index",
+          "type": "integer"
+        },
+        "channels_covered": {
+          "anyOf": [
+            {
+              "maximum": 17,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Channels Covered"
+        },
+        "partial": {
+          "default": false,
+          "title": "Partial",
+          "type": "boolean"
+        },
+        "elapsed_s": {
+          "title": "Elapsed S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "slot",
+        "stage",
+        "png_url",
+        "width",
+        "height",
+        "label",
+        "visit_index",
+        "elapsed_s"
+      ],
+      "title": "FrameEvent",
+      "type": "object"
+    },
+    "FrameLabel": {
+      "additionalProperties": false,
+      "description": "What the UI prints under a frame: wavelength, date, provenance.",
+      "properties": {
+        "frame_id": {
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "detector": {
+          "title": "Detector",
+          "type": "integer"
+        },
+        "lambda_um": {
+          "title": "Lambda Um",
+          "type": "number"
+        },
+        "channel": {
+          "anyOf": [
+            {
+              "maximum": 17,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Channel"
+        },
+        "t_mid_mjd": {
+          "title": "T Mid Mjd",
+          "type": "number"
+        },
+        "release": {
+          "title": "Release",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "flags_summary": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Flags Summary",
+          "type": "array"
+        }
+      },
+      "required": [
+        "frame_id",
+        "detector",
+        "lambda_um",
+        "t_mid_mjd",
+        "release",
+        "version"
+      ],
+      "title": "FrameLabel",
+      "type": "object"
+    },
+    "HeartbeatEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "heartbeat",
+          "default": "heartbeat",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "HeartbeatEvent",
+      "type": "object"
+    },
+    "PlanEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "plan",
+          "default": "plan",
+          "title": "Type",
+          "type": "string"
+        },
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "n_slots": {
+          "title": "N Slots",
+          "type": "integer"
+        },
+        "n_visits_total": {
+          "title": "N Visits Total",
+          "type": "integer"
+        },
+        "n_visits_shown": {
+          "title": "N Visits Shown",
+          "type": "integer"
+        },
+        "est_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Est Bytes"
+        }
+      },
+      "required": [
+        "job_id",
+        "n_slots",
+        "n_visits_total",
+        "n_visits_shown"
+      ],
+      "title": "PlanEvent",
+      "type": "object"
+    },
+    "ProgressEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "progress",
+          "default": "progress",
+          "title": "Type",
+          "type": "string"
+        },
+        "done": {
+          "title": "Done",
+          "type": "integer"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "stage": {
+          "$ref": "#/$defs/Stage"
+        }
+      },
+      "required": [
+        "done",
+        "total",
+        "stage"
+      ],
+      "title": "ProgressEvent",
+      "type": "object"
+    },
+    "Stage": {
+      "enum": [
+        "preview",
+        "refined"
+      ],
+      "title": "Stage",
+      "type": "string"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "done": "#/$defs/DoneEvent",
+      "error": "#/$defs/ErrorEvent",
+      "frame": "#/$defs/FrameEvent",
+      "heartbeat": "#/$defs/HeartbeatEvent",
+      "plan": "#/$defs/PlanEvent",
+      "progress": "#/$defs/ProgressEvent"
+    },
+    "propertyName": "type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/PlanEvent"
+    },
+    {
+      "$ref": "#/$defs/ProgressEvent"
+    },
+    {
+      "$ref": "#/$defs/FrameEvent"
+    },
+    {
+      "$ref": "#/$defs/HeartbeatEvent"
+    },
+    {
+      "$ref": "#/$defs/DoneEvent"
+    },
+    {
+      "$ref": "#/$defs/ErrorEvent"
+    }
+  ]
+}

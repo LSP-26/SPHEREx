@@ -1,0 +1,158 @@
+{
+  "$defs": {
+    "Plane": {
+      "enum": [
+        "IMAGE",
+        "FLAGS",
+        "VARIANCE",
+        "ZODI"
+      ],
+      "title": "Plane",
+      "type": "string"
+    },
+    "PlaneSpec": {
+      "additionalProperties": false,
+      "description": "Where one plane's pixels start in the FITS file, and how to decode them.",
+      "properties": {
+        "offset": {
+          "description": "byte offset of the first pixel of row 0",
+          "minimum": 0,
+          "title": "Offset",
+          "type": "integer"
+        },
+        "bitpix": {
+          "title": "Bitpix",
+          "type": "integer"
+        },
+        "bzero": {
+          "default": 0.0,
+          "title": "Bzero",
+          "type": "number"
+        },
+        "bscale": {
+          "default": 1.0,
+          "title": "Bscale",
+          "type": "number"
+        }
+      },
+      "required": [
+        "offset",
+        "bitpix"
+      ],
+      "title": "PlaneSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "frame_id": {
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "detector": {
+      "maximum": 6,
+      "minimum": 1,
+      "title": "Detector",
+      "type": "integer"
+    },
+    "obsid": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Obsid"
+    },
+    "t_start": {
+      "description": "MJD",
+      "title": "T Start",
+      "type": "number"
+    },
+    "t_end": {
+      "description": "MJD",
+      "title": "T End",
+      "type": "number"
+    },
+    "release": {
+      "title": "Release",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "uri": {
+      "description": "s3://nasa-irsa-spherex/... key, derived from IRSA metadata",
+      "title": "Uri",
+      "type": "string"
+    },
+    "wcs_header": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Wcs Header"
+    },
+    "planes": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/PlaneSpec"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/Plane"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Planes"
+    },
+    "naxis1": {
+      "default": 2040,
+      "title": "Naxis1",
+      "type": "integer"
+    },
+    "naxis2": {
+      "default": 2040,
+      "title": "Naxis2",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "frame_id",
+    "detector",
+    "t_start",
+    "t_end",
+    "release",
+    "version",
+    "uri"
+  ],
+  "title": "FrameRef",
+  "type": "object"
+}
