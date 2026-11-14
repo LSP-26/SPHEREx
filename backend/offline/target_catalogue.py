@@ -31,7 +31,12 @@ from urllib.parse import urljoin
 
 import httpx
 
-from backend.offline.build_catalogue import TAP, build_shard, read_frame_record
+from backend.offline.build_catalogue import (
+    DEFAULT_WORKERS,
+    TAP,
+    build_shard,
+    read_frame_record,
+)
 
 TAP_ASYNC = TAP.removesuffix("/sync") + "/async"
 
@@ -117,7 +122,8 @@ def positional_rows(ra: float, dec: float, post: Callable = run_async_query,
 
 
 def build_all(out: str | Path, targets: dict[str, tuple[float, float]] = TARGETS, *,
-              only: list[str] | None = None, limit: int | None = None, workers: int = 16,
+              only: list[str] | None = None, limit: int | None = None,
+              workers: int = DEFAULT_WORKERS,
               rows_fn: Callable = positional_rows, reader: Callable = read_frame_record,
               log: Callable[[str], None] = print) -> list[Path]:
     """One shard per target. Finished shards are skipped, so a rerun resumes."""
@@ -150,7 +156,7 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description="INTERIM: tiny catalogue for the demo targets")
     ap.add_argument("--out", default=".cache/catalogue_targets")
     ap.add_argument("--only", nargs="+", choices=sorted(TARGETS))
-    ap.add_argument("--workers", type=int, default=16)
+    ap.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     ap.add_argument("--limit", type=int, default=None,
                     help="max frames per target; trial runs only, use a throwaway --out")
     a = ap.parse_args(argv)

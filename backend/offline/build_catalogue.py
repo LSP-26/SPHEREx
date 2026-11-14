@@ -9,12 +9,14 @@ finished shards are skipped. Frames whose header pass fails are listed in <shard
 from __future__ import annotations
 
 import argparse
+import atexit
 import csv
 import io
 import json
 import os
 import re
 import tempfile
+import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -24,14 +26,17 @@ import httpx
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from backend.adapters.fits_layout import HttpRangeSource
 from backend.adapters.frame_layout import read_frame_layout, spec_to_list
+from backend.adapters.pooled_source import PooledRangeSource, make_client
 from backend.adapters.wcs_util import _ALT, celestial_wcs
 
 TAP = "https://irsa.ipac.caltech.edu/TAP/sync"
 BUCKET = "nasa-irsa-spherex"
 S3_HTTPS = f"https://{BUCKET}.s3.us-east-1.amazonaws.com/"
 PLANES = ("IMAGE", "FLAGS", "VARIANCE", "ZODI")
+# 32 threads beat 16 about 1.8x in the X5 benchmark (from home). 64 was unstable
+# (one run stalled with a 5 s p95), so do not go higher without re-measuring from us-east-1.
+DEFAULT_WORKERS = 32
 WCS_PREFIXES = ("CTYPE", "CRPIX", "CRVAL", "CD", "PC", "CDELT", "CUNIT", "A_", "B_", "AP_",
                 "BP_", "LONPOLE", "LATPOLE", "RADESYS", "EQUINOX", "NAXIS")
 # Column names p.time_bounds_lower/upper come from the spxquery package; confirm on first run.
@@ -72,6 +77,21 @@ def parse_detector(name: str) -> int | None:
 
 
 # ------------------------------------------------------------------ header pass
+_CLIENT: httpx.Client | None = None
+_CLIENT_LOCK = threading.Lock()
+
+
+def _shared_client() -> httpx.Client:
+    """One connection pool for the whole run, created on first use (see pooled_source).
+    Reusing connections saves about 44 ms of the 116 ms a request took from home."""
+    global _CLIENT
+    with _CLIENT_LOCK:
+        if _CLIENT is None:
+            _CLIENT = make_client(workers=128)
+            atexit.register(_CLIENT.close)
+        return _CLIENT
+
+
 def _retry(fn: Callable, attempts: int = 3):
     """Retry on network trouble. A ValueError means the file itself is in a format we cannot
     read, so retrying cannot help and it is raised at once."""
@@ -90,7 +110,7 @@ def read_frame_record(row: dict) -> dict:
     """One frame: walk its headers (4 range requests) and return a catalogue row."""
     key = key_from_uri(row["uri"])
     name = key.rsplit("/", 1)[-1]
-    src = HttpRangeSource(S3_HTTPS + key)
+    src = PooledRangeSource(S3_HTTPS + key, _shared_client())
     layout = _retry(lambda: read_frame_layout(src))
     hdr = layout.image_header
     ny, nx = layout.shape
@@ -141,7 +161,7 @@ def _atomic_write(path: Path, write: Callable[[Path], None]) -> None:
 
 
 def build_shard(path: Path, rows: list[dict], reader: Callable[[dict], dict] = read_frame_record,
-                workers: int = 16) -> tuple[int, int] | None:
+                workers: int = DEFAULT_WORKERS) -> tuple[int, int] | None:
     """Write one shard. Returns (ok, failed), or None if the shard already exists."""
     if path.exists():
         return None
@@ -170,7 +190,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--start-mjd", type=float, default=60700.0)
     ap.add_argument("--end-mjd", type=float, default=61400.0)
     ap.add_argument("--window-days", type=float, default=14.0)
-    ap.add_argument("--workers", type=int, default=16)
+    ap.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     ap.add_argument("--limit", type=int, default=None,
                     help="max frames per shard; for trial runs only, use a throwaway --out")
     a = ap.parse_args(argv)

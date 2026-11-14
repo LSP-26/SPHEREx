@@ -16,7 +16,12 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from backend.offline.build_catalogue import build_shard, read_frame_record, tap_rows
+from backend.offline.build_catalogue import (
+    DEFAULT_WORKERS,
+    build_shard,
+    read_frame_record,
+    tap_rows,
+)
 
 LAG_DAYS = 2.0
 MIN_WINDOW_DAYS = 1.0
@@ -37,7 +42,7 @@ def shard_windows(root: str | Path) -> list[tuple[float, float]]:
 
 
 def refresh(out: str | Path, *, now: float | None = None, window_days: float = 14.0,
-            workers: int = 16, default_start: float = DEFAULT_START_MJD,
+            workers: int = DEFAULT_WORKERS, default_start: float = DEFAULT_START_MJD,
             limit: int | None = None, max_windows: int | None = None, dry_run: bool = False,
             rows_fn: Callable = tap_rows, reader: Callable = read_frame_record,
             log: Callable[[str], None] = print) -> list[Path]:
@@ -78,7 +83,7 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=".cache/catalogue")
     ap.add_argument("--window-days", type=float, default=14.0)
-    ap.add_argument("--workers", type=int, default=16)
+    ap.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     ap.add_argument("--dry-run", action="store_true", help="list the shards it would build")
     ap.add_argument("--max-windows", type=int, default=None, help="stop after this many shards")
     ap.add_argument("--limit", type=int, default=None,
