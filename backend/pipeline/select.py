@@ -162,8 +162,17 @@ def make_selector(lambda_of: LambdaOf | None = None, gap_days: float | None = No
                     picks[(v, det)] = fs[len(fs) // 2]
 
         have = sorted({v for v, _ in picks})
-        n_det = max(1, len({d for _, d in picks}))
-        shown = set(even_subsample(have, max(1, req.preview_cap // n_det)))
+        per_visit: dict[int, int] = defaultdict(int)
+        for v, _ in picks:
+            per_visit[v] += 1
+        # Show as many visits as fit under the cap. A visit gives one frame per detector that
+        # saw the target: 2 near the ecliptic poles (one detector pair per exposure), up to 6
+        # elsewhere. The old rule divided the cap by the detectors seen overall, which left
+        # R Dra with 12 frames out of 36.
+        k = len(have)
+        while k > 1 and sum(per_visit[v] for v in even_subsample(have, k)) > req.preview_cap:
+            k -= 1
+        shown = set(even_subsample(have, k))
         chosen = sorted(((f, v) for (v, _), f in picks.items() if v in shown),
                         key=lambda fv: (fv[0].t_mid, fv[0].detector))
         chosen = even_subsample(chosen, req.preview_cap)
