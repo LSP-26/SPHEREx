@@ -20,6 +20,8 @@ DEFAULT_GAP_DAYS = 30.0     # plan: start near 30 d, then check the gap histogra
 MATCH_TOLERANCE = 0.5       # resolution elements (plan A4, tau)
 MIN_JUMP_RATIO = 5.0
 MIN_VISIT_GAP_DAYS = 2.0    # a gap smaller than this is never a split between visits
+MAX_VISIT_DAYS = 60.0       # auto mode: a visit longer than this is cut into windows
+SPLIT_WINDOW_DAYS = 14.0    # window width, about the two weeks a pass over a point takes
 
 
 @dataclass(frozen=True)
@@ -72,8 +74,24 @@ def choose_gap(frames: Sequence[FrameRef], default: float = DEFAULT_GAP_DAYS) ->
     return best if best is not None and best_ratio >= MIN_JUMP_RATIO else default
 
 
-def cluster_visits(frames: Sequence[FrameRef], gap_days: float | None = None) -> list[Visit]:
-    """Split frames (sorted by time) wherever the gap to the previous frame exceeds gap_days."""
+def _split_long(group: list[FrameRef], width: float) -> list[list[FrameRef]]:
+    """Cut a time-sorted group into consecutive windows of `width` days (empty ones dropped)."""
+    t0 = group[0].t_start
+    bins: dict[int, list[FrameRef]] = {}
+    for f in group:
+        bins.setdefault(int((f.t_start - t0) // width), []).append(f)
+    return [bins[k] for k in sorted(bins)]
+
+
+def cluster_visits(frames: Sequence[FrameRef], gap_days: float | None = None,
+                   max_span_days: float = MAX_VISIT_DAYS,
+                   window_days: float = SPLIT_WINDOW_DAYS) -> list[Visit]:
+    """Split frames (sorted by time) wherever the gap to the previous frame exceeds gap_days.
+
+    In auto mode (gap_days is None) a visit longer than max_span_days is then cut into
+    windows of window_days. Near the ecliptic poles coverage is almost continuous (R Dra:
+    2,365 frames over 519 d, no gap above 38 d), so there is no gap structure to find and
+    the gap rule alone gives one huge visit. An explicit gap_days is used as given."""
     if not frames:
         return []
     ordered = sorted(frames, key=lambda f: f.t_start)
@@ -86,6 +104,12 @@ def cluster_visits(frames: Sequence[FrameRef], gap_days: float | None = None) ->
             latest_end = f.t_end
         groups[-1].append(f)
         latest_end = max(latest_end, f.t_end)
+    if gap_days is None:
+        cut: list[list[FrameRef]] = []
+        for g in groups:
+            span = max(f.t_end for f in g) - g[0].t_start
+            cut.extend(_split_long(g, window_days) if span > max_span_days else [g])
+        groups = cut
     return [Visit(visit_index=i, t_start=g[0].t_start, t_end=max(f.t_end for f in g),
                   frame_ids=[f.frame_id for f in g]) for i, g in enumerate(groups)]
 
