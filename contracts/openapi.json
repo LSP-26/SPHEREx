@@ -1,0 +1,722 @@
+{
+  "components": {
+    "schemas": {
+      "DoneEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "elapsed_s": {
+            "title": "Elapsed S",
+            "type": "number"
+          },
+          "n_frames": {
+            "title": "N Frames",
+            "type": "integer"
+          },
+          "type": {
+            "const": "done",
+            "default": "done",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "n_frames",
+          "elapsed_s"
+        ],
+        "title": "DoneEvent",
+        "type": "object"
+      },
+      "ErrorCode": {
+        "enum": [
+          "bad_coords",
+          "no_coverage",
+          "irsa_busy",
+          "irsa_down",
+          "s3_down",
+          "timeout",
+          "cancelled",
+          "internal"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "type": {
+            "const": "error",
+            "default": "error",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorEvent",
+        "type": "object"
+      },
+      "FrameEvent": {
+        "additionalProperties": false,
+        "description": "A rendered frame. A REFINED event with the same slot replaces the PREVIEW one.",
+        "properties": {
+          "channels_covered": {
+            "anyOf": [
+              {
+                "maximum": 17.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channels Covered"
+          },
+          "elapsed_s": {
+            "title": "Elapsed S",
+            "type": "number"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "label": {
+            "$ref": "#/components/schemas/FrameLabel"
+          },
+          "partial": {
+            "default": false,
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "png_url": {
+            "title": "Png Url",
+            "type": "string"
+          },
+          "slot": {
+            "title": "Slot",
+            "type": "integer"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/Stage"
+          },
+          "type": {
+            "const": "frame",
+            "default": "frame",
+            "title": "Type",
+            "type": "string"
+          },
+          "visit_index": {
+            "title": "Visit Index",
+            "type": "integer"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slot",
+          "stage",
+          "png_url",
+          "width",
+          "height",
+          "label",
+          "visit_index",
+          "elapsed_s"
+        ],
+        "title": "FrameEvent",
+        "type": "object"
+      },
+      "FrameLabel": {
+        "additionalProperties": false,
+        "description": "What the UI prints under a frame: wavelength, date, provenance.",
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "maximum": 17.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "detector": {
+            "title": "Detector",
+            "type": "integer"
+          },
+          "flags_summary": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flags Summary",
+            "type": "array"
+          },
+          "frame_id": {
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "lambda_um": {
+            "title": "Lambda Um",
+            "type": "number"
+          },
+          "release": {
+            "title": "Release",
+            "type": "string"
+          },
+          "t_mid_mjd": {
+            "title": "T Mid Mjd",
+            "type": "number"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame_id",
+          "detector",
+          "lambda_um",
+          "t_mid_mjd",
+          "release",
+          "version"
+        ],
+        "title": "FrameLabel",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HeartbeatEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "heartbeat",
+            "default": "heartbeat",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "title": "HeartbeatEvent",
+        "type": "object"
+      },
+      "JobHandle": {
+        "additionalProperties": false,
+        "description": "Returned by POST /flipbook. Open stream_url with EventSource; if nothing arrives for\n5 s (a proxy may be buffering the stream) poll poll_url instead. DELETE job_url cancels.\nThe URLs are paths on the API host.",
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_url": {
+            "title": "Job Url",
+            "type": "string"
+          },
+          "poll_url": {
+            "title": "Poll Url",
+            "type": "string"
+          },
+          "stream_url": {
+            "title": "Stream Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "stream_url",
+          "poll_url",
+          "job_url"
+        ],
+        "title": "JobHandle",
+        "type": "object"
+      },
+      "PlanEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "est_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Est Bytes"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "n_slots": {
+            "title": "N Slots",
+            "type": "integer"
+          },
+          "n_visits_shown": {
+            "title": "N Visits Shown",
+            "type": "integer"
+          },
+          "n_visits_total": {
+            "title": "N Visits Total",
+            "type": "integer"
+          },
+          "type": {
+            "const": "plan",
+            "default": "plan",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "n_slots",
+          "n_visits_total",
+          "n_visits_shown"
+        ],
+        "title": "PlanEvent",
+        "type": "object"
+      },
+      "PollResponse": {
+        "additionalProperties": false,
+        "description": "GET /flipbook/{job_id}/events?after=N. `next` is the value to pass as `after` next time.",
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "events": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "done": "#/components/schemas/DoneEvent",
+                  "error": "#/components/schemas/ErrorEvent",
+                  "frame": "#/components/schemas/FrameEvent",
+                  "heartbeat": "#/components/schemas/HeartbeatEvent",
+                  "plan": "#/components/schemas/PlanEvent",
+                  "progress": "#/components/schemas/ProgressEvent"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PlanEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/ProgressEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/FrameEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/HeartbeatEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/DoneEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/ErrorEvent"
+                }
+              ]
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "next": {
+            "title": "Next",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "next",
+          "done"
+        ],
+        "title": "PollResponse",
+        "type": "object"
+      },
+      "ProgressEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "integer"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/Stage"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "type": {
+            "const": "progress",
+            "default": "progress",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "done",
+          "total",
+          "stage"
+        ],
+        "title": "ProgressEvent",
+        "type": "object"
+      },
+      "Stage": {
+        "enum": [
+          "preview",
+          "refined"
+        ],
+        "title": "Stage",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "The HTTP API.\n\n  POST   /flipbook?ra=..&dec=..       start (or join) a job. Returns a JobHandle at once.\n  GET    /flipbook/{job}/stream       the job's events as server-sent events\n  GET    /flipbook/{job}/events       the same events by polling: ?after=N&wait=SECONDS\n  DELETE /flipbook/{job}              cancel\n  GET    /flipbook?ra=..&dec=..       shortcut: start (or join) and stream in one request\n  GET    /frames/{key}.png            a rendered frame (immutable, cache it forever)\n  GET    /health, /fixtures           status; demo positions when running on fixtures\n\nQuery parameters are the URL state of the page (see contracts.url_state): ra, dec, fov, view,\ndet, lmin, lmax, cap, zodi, release. Everything except ra and dec is optional.\n\nStreaming behind proxies: the stream sends X-Accel-Buffering: no, a 2 KB preamble, and a\nheartbeat event every heartbeat_s. If a proxy buffers anyway, the client starts a job with POST\n(plain JSON, never buffered for long) and polls instead of streaming.\n",
+    "title": "SPHEREx Flipbook API",
+    "version": "0.3.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/fixtures": {
+      "get": {
+        "description": "Demo positions that have data when the server runs on fixtures (empty otherwise).",
+        "operationId": "fixtures_fixtures_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Fixtures Fixtures Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Fixtures"
+      }
+    },
+    "/flipbook": {
+      "get": {
+        "operationId": "start_and_stream_flipbook_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Server-sent events. Each event's data is the JSON of a contracts Event (see Event.json)."
+          },
+          "204": {
+            "description": "The job is finished and the client has every event (stops EventSource reconnecting)."
+          }
+        },
+        "summary": "Start And Stream"
+      },
+      "post": {
+        "operationId": "start_flipbook_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobHandle"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Start"
+      }
+    },
+    "/flipbook/{job_id}": {
+      "delete": {
+        "operationId": "cancel_flipbook__job_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Cancel Flipbook  Job Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel"
+      }
+    },
+    "/flipbook/{job_id}/events": {
+      "get": {
+        "description": "Events from index `after`. With wait > 0 and nothing new, waits up to that many\nseconds for something to arrive.",
+        "operationId": "poll_flipbook__job_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "wait",
+            "required": false,
+            "schema": {
+              "default": 0.0,
+              "maximum": 25.0,
+              "minimum": 0.0,
+              "title": "Wait",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Poll"
+      }
+    },
+    "/flipbook/{job_id}/stream": {
+      "get": {
+        "operationId": "stream_flipbook__job_id__stream_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Server-sent events. Each event's data is the JSON of a contracts Event (see Event.json)."
+          },
+          "204": {
+            "description": "The job is finished and the client has every event (stops EventSource reconnecting)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream"
+      }
+    },
+    "/frames/{key}.png": {
+      "get": {
+        "operationId": "frame_frames__key__png_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {}
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not cached"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Frame"
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Health Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    }
+  }
+}

@@ -16,6 +16,8 @@ def main() -> None:
         "FrameRef": m.FrameRef,
         "FrameLabel": m.FrameLabel,
         "Event": TypeAdapter(m.Event),
+        "JobHandle": m.JobHandle,
+        "PollResponse": m.PollResponse,
     }
     for name, t in items.items():
         schema = t.model_json_schema() if hasattr(t, "model_json_schema") else t.json_schema()

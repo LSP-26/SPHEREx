@@ -6,7 +6,7 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-CONTRACT_VERSION = "0.2.0"
+CONTRACT_VERSION = "0.3.0"
 
 
 class _M(BaseModel):
@@ -176,3 +176,21 @@ Event = Annotated[
     Union[PlanEvent, ProgressEvent, FrameEvent, HeartbeatEvent, DoneEvent, ErrorEvent],
     Field(discriminator="type"),
 ]
+
+
+# ---------------------------------------------------------------- HTTP API shapes
+class JobHandle(_M):
+    """Returned by POST /flipbook. Open stream_url with EventSource; if nothing arrives for
+    5 s (a proxy may be buffering the stream) poll poll_url instead. DELETE job_url cancels.
+    The URLs are paths on the API host."""
+    job_id: str
+    stream_url: str
+    poll_url: str
+    job_url: str
+
+
+class PollResponse(_M):
+    """GET /flipbook/{job_id}/events?after=N. `next` is the value to pass as `after` next time."""
+    events: list[Event]
+    next: int
+    done: bool

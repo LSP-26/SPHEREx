@@ -1,0 +1,30 @@
+{
+  "additionalProperties": false,
+  "description": "Returned by POST /flipbook. Open stream_url with EventSource; if nothing arrives for\n5 s (a proxy may be buffering the stream) poll poll_url instead. DELETE job_url cancels.\nThe URLs are paths on the API host.",
+  "properties": {
+    "job_id": {
+      "title": "Job Id",
+      "type": "string"
+    },
+    "stream_url": {
+      "title": "Stream Url",
+      "type": "string"
+    },
+    "poll_url": {
+      "title": "Poll Url",
+      "type": "string"
+    },
+    "job_url": {
+      "title": "Job Url",
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "stream_url",
+    "poll_url",
+    "job_url"
+  ],
+  "title": "JobHandle",
+  "type": "object"
+}
