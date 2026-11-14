@@ -114,6 +114,10 @@ def _read_header(src: ByteSource, start: int) -> tuple[fits.Header, int]:
                 return fits.Header.fromstring(text[:length]), length
 
 
+def read_header(src: ByteSource, hdu: HduLayout) -> fits.Header:
+    return _read_header(src, hdu.header_start)[0]
+
+
 def read_layout(src: ByteSource) -> list[HduLayout]:
     out: list[HduLayout] = []
     offset, size = 0, src.size
@@ -144,8 +148,12 @@ def read_rows(src: ByteSource, hdu: HduLayout, y0: int, y1: int) -> np.ndarray:
     if not 0 <= y0 < y1 <= hdu.shape[0]:
         raise ValueError(f"rows {y0}:{y1} outside 0:{hdu.shape[0]}")
     raw = src.read(hdu.data_start + y0 * hdu.row_bytes, (y1 - y0) * hdu.row_bytes)
-    arr = np.frombuffer(raw, dtype=_DTYPES[hdu.bitpix]).reshape(y1 - y0, hdu.shape[1])
-    arr = arr.astype("float64")
-    if hdu.bscale != 1.0 or hdu.bzero != 0.0:
-        arr = arr * hdu.bscale + hdu.bzero
+    return decode_rows(raw, hdu.bitpix, hdu.bzero, hdu.bscale, hdu.shape[1])
+
+
+def decode_rows(raw: bytes, bitpix: int, bzero: float, bscale: float, ncols: int) -> np.ndarray:
+    """Big-endian FITS bytes to float64 rows, with BSCALE/BZERO applied."""
+    arr = np.frombuffer(raw, dtype=_DTYPES[bitpix]).reshape(-1, ncols).astype("float64")
+    if bscale != 1.0 or bzero != 0.0:
+        arr = arr * bscale + bzero
     return arr
