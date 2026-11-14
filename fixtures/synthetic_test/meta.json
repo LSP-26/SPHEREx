@@ -1,0 +1,62 @@
+{
+ "name": "synthetic_test",
+ "ra": 10.0,
+ "dec": 0.0,
+ "synthetic": true,
+ "frames": [
+  {
+   "frame_id": "synth_00",
+   "detector": 1,
+   "t_start": 61000.0,
+   "t_end": 61000.01,
+   "release": "QR2",
+   "version": "v0",
+   "uri": "s3://synthetic/synth_00.fits"
+  },
+  {
+   "frame_id": "synth_01",
+   "detector": 2,
+   "t_start": 61015.0,
+   "t_end": 61015.01,
+   "release": "QR2",
+   "version": "v0",
+   "uri": "s3://synthetic/synth_01.fits"
+  },
+  {
+   "frame_id": "synth_02",
+   "detector": 1,
+   "t_start": 61030.0,
+   "t_end": 61030.01,
+   "release": "QR2",
+   "version": "v0",
+   "uri": "s3://synthetic/synth_02.fits"
+  },
+  {
+   "frame_id": "synth_03",
+   "detector": 2,
+   "t_start": 61145.0,
+   "t_end": 61145.01,
+   "release": "QR2",
+   "version": "v0",
+   "uri": "s3://synthetic/synth_03.fits"
+  },
+  {
+   "frame_id": "synth_04",
+   "detector": 1,
+   "t_start": 61160.0,
+   "t_end": 61160.01,
+   "release": "QR2",
+   "version": "v0",
+   "uri": "s3://synthetic/synth_04.fits"
+  },
+  {
+   "frame_id": "synth_05",
+   "detector": 2,
+   "t_start": 61175.0,
+   "t_end": 61175.01,
+   "release": "QR2",
+   "version": "v0",
+   "uri": "s3://synthetic/synth_05.fits"
+  }
+ ]
+}
