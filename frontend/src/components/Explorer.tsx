@@ -53,7 +53,7 @@ interface Step {
 const SPEEDS = [0.5, 1, 2, 4];
 
 const chip = (on: boolean) =>
-  `tabular rounded-sm border px-3 py-1.5 text-sm disabled:opacity-35 ${on ? "border-ink bg-ink text-paper" : "border-rule-strong bg-panel text-ink hover:border-accent"}`;
+  `tabular rounded-sm border px-2 py-1 text-[13px] disabled:opacity-35 ${on ? "border-ink bg-ink text-paper" : "border-rule-strong bg-panel text-ink hover:border-accent"}`;
 
 export function Explorer(p: Props) {
   const { slots } = p.state;
@@ -257,17 +257,17 @@ export function Explorer(p: Props) {
           <div className="flex">
             <button type="button" onClick={() => go(-1)} aria-label="Previous look" className={`${buttonClass} rounded-r-none`}>◀</button>
             <button type="button" onClick={() => setPlaying((x) => !x)} disabled={steps.length < 2}
-              className={`${buttonClass} -ml-px w-20 rounded-none`}>{playing ? "Pause" : "Play"}</button>
+              className={`${buttonClass} -ml-px w-16 rounded-none`}>{playing ? "Pause" : "Play"}</button>
             <button type="button" onClick={() => go(1)} aria-label="Next look" className={`${buttonClass} -ml-px rounded-l-none`}>▶</button>
           </div>
           <label className="flex items-center gap-1.5 text-sm text-muted">
             Speed
             <select value={fps} onChange={(e) => setFps(Number(e.target.value))}
-              className="rounded-sm border border-rule-strong bg-panel px-2 py-1.5 text-sm text-ink">
+              className="rounded-sm border border-rule-strong bg-panel px-2 py-1 text-[13px] text-ink">
               {SPEEDS.map((s) => <option key={s} value={s}>{s} frame{s === 1 ? "" : "s"}/s</option>)}
             </select>
           </label>
-          <ol className="flex min-w-0 flex-1 gap-1 overflow-x-auto" aria-label="Looks, oldest first">
+          <ol className="flex min-w-0 flex-1 flex-wrap gap-1" aria-label="Looks, oldest first">
             {steps.map((s, i) => (
               <li key={`${s.t}-${i}`} className="shrink-0">
                 <button type="button" onClick={() => { setPlaying(false); setIndex(i); }} aria-current={i === at} className={chip(i === at)}>
@@ -283,7 +283,7 @@ export function Explorer(p: Props) {
         <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-3 text-sm">
           <div className="min-w-0 space-y-2.5">
             <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Detector band">
-              <span className="w-20 text-muted">Band (µm)</span>
+              <span className="w-[4.5rem] text-muted">Band (µm)</span>
               {BANDS.map((b) => {
                 const looks = byBand.get(b.detector) ?? [];
                 const w = bandWavelength(looks);
@@ -302,7 +302,7 @@ export function Explorer(p: Props) {
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <span className="flex items-center gap-1.5" role="radiogroup" aria-label="View">
-                <span className="w-20 text-muted">View</span>
+                <span className="w-[4.5rem] text-muted">View</span>
                 {(["blink", "diff"] as const).map((m) => (
                   <button key={m} type="button" role="radio" aria-checked={mode === m} disabled={m === "diff" && (band === "colour" || steps.length < 2)}
                     onClick={() => p.onView(band, m)} className={chip(mode === m)}

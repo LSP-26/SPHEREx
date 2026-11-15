@@ -25,7 +25,7 @@ export function Section({ title, children, aside }: { title: string; children: R
 }
 
 export const buttonClass =
-  "rounded-sm border border-rule-strong bg-panel px-3 py-1.5 text-sm text-ink hover:border-accent hover:text-accent disabled:opacity-40";
+  "rounded-sm border border-rule-strong bg-panel px-2 py-1 text-[13px] text-ink hover:border-accent hover:text-accent disabled:opacity-40";
 
 function Copy({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false);
