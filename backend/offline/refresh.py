@@ -25,6 +25,7 @@ from backend.offline.build_catalogue import (
 
 LAG_DAYS = 2.0
 MIN_WINDOW_DAYS = 1.0
+REDO_DAYS = 14.0   # shards ending within this many days of the cutoff are rebuilt
 DEFAULT_START_MJD = 60700.0
 _UNIX_EPOCH_MJD = 40587.0
 _SHARD = re.compile(r"^shard_(\d+\.\d)_(\d+\.\d)\.parquet$")
@@ -44,17 +45,28 @@ def shard_windows(root: str | Path) -> list[tuple[float, float]]:
 def refresh(out: str | Path, *, now: float | None = None, window_days: float = 14.0,
             workers: int = DEFAULT_WORKERS, default_start: float = DEFAULT_START_MJD,
             limit: int | None = None, max_windows: int | None = None, dry_run: bool = False,
+            redo_days: float = REDO_DAYS,
             rows_fn: Callable = tap_rows, reader: Callable = read_frame_record,
             log: Callable[[str], None] = print) -> list[Path]:
     """Build the missing shards. Returns their paths (the planned ones, if dry_run)."""
     out = Path(out)
-    windows = shard_windows(out)
+    # floor to 0.1 d so shard names match the window exactly (no rounding gaps between shards)
+    cutoff = math.floor(((now_mjd() if now is None else now) - LAG_DAYS) * 10) / 10
+    recent = [(a, b) for a, b in shard_windows(out) if b > cutoff - redo_days]
+    stale = recent if redo_days > 0 else []
+    for a, b in stale:
+        name = f"shard_{a:.1f}_{b:.1f}"
+        if dry_run:
+            log(f"would delete {name}.parquet (redo window)")
+        else:
+            for suffix in (".parquet", ".failed.json"):
+                (out / f"{name}{suffix}").unlink(missing_ok=True)
+            log(f"deleted {name}.parquet (redo window)")
+    windows = [w for w in shard_windows(out) if w not in stale]
     for (_, hi), (lo, _) in zip(windows, windows[1:], strict=False):
         if lo - hi > 0.15:
             log(f"WARNING: gap in the catalogue between MJD {hi:.1f} and {lo:.1f}")
     lo = max(hi for _, hi in windows) if windows else default_start
-    # floor to 0.1 d so shard names match the window exactly (no rounding gaps between shards)
-    cutoff = math.floor(((now_mjd() if now is None else now) - LAG_DAYS) * 10) / 10
     built: list[Path] = []
     while (cutoff - lo >= MIN_WINDOW_DAYS - 1e-9
            and (max_windows is None or len(built) < max_windows)):
@@ -88,9 +100,11 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--max-windows", type=int, default=None, help="stop after this many shards")
     ap.add_argument("--limit", type=int, default=None,
                     help="max frames per shard; trial runs only, use a throwaway --out")
+    ap.add_argument("--redo-days", type=float, default=REDO_DAYS,
+                    help="rebuild shards that end within this many days of the cutoff")
     a = ap.parse_args(argv)
     refresh(a.out, window_days=a.window_days, workers=a.workers, dry_run=a.dry_run,
-            max_windows=a.max_windows, limit=a.limit)
+            max_windows=a.max_windows, limit=a.limit, redo_days=a.redo_days)
 
 
 if __name__ == "__main__":

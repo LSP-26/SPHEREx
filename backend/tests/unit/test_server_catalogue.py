@@ -39,7 +39,8 @@ def s3_and_shards(tmp_path, monkeypatch):
 
 def test_a_real_request_flows_through_the_catalogue_to_pngs(s3_and_shards):
     s3, shards = s3_and_shards
-    settings = Settings(source="catalogue", catalogue_dir=shards, cache_dir=None)
+    settings = Settings(source="catalogue", catalogue_dir=shards, cache_dir=None,
+                         wavelength="stub")
     with LiveServer(settings) as s, httpx.Client(base_url=s.url, timeout=30) as c:
         assert c.get("/health").json()["source"] == "catalogue"
         r, events = read_sse(c, "/flipbook?ra=10&dec=0&fov=2")
@@ -55,7 +56,8 @@ def test_a_real_request_flows_through_the_catalogue_to_pngs(s3_and_shards):
 
 def test_a_position_outside_the_catalogue_says_no_coverage(s3_and_shards):
     s3, shards = s3_and_shards
-    settings = Settings(source="catalogue", catalogue_dir=shards, cache_dir=None)
+    settings = Settings(source="catalogue", catalogue_dir=shards, cache_dir=None,
+                         wavelength="stub")
     with LiveServer(settings) as s, httpx.Client(base_url=s.url, timeout=30) as c:
         _, events = read_sse(c, "/flipbook?ra=200&dec=-60")
         assert events[-1].data["type"] == "error" and events[-1].data["code"] == "no_coverage"

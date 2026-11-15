@@ -34,12 +34,12 @@ TAP = "https://irsa.ipac.caltech.edu/TAP/sync"
 BUCKET = "nasa-irsa-spherex"
 S3_HTTPS = f"https://{BUCKET}.s3.us-east-1.amazonaws.com/"
 PLANES = ("IMAGE", "FLAGS", "VARIANCE", "ZODI")
-# 32 threads beat 16 about 1.8x in the X5 benchmark (from home). 64 was unstable
+# 32 threads beat 16 about 1.8x in the X5 benchmark (2026-11-01, from home). 64 was unstable
 # (one run stalled with a 5 s p95), so do not go higher without re-measuring from us-east-1.
 DEFAULT_WORKERS = 32
 WCS_PREFIXES = ("CTYPE", "CRPIX", "CRVAL", "CD", "PC", "CDELT", "CUNIT", "A_", "B_", "AP_",
                 "BP_", "LONPOLE", "LATPOLE", "RADESYS", "EQUINOX", "NAXIS")
-# Column names p.time_bounds_lower/upper come from the spxquery package; confirm on first run.
+# Column names p.time_bounds_lower/upper confirmed by the full catalogue build (D1.2).
 ADQL = ("SELECT a.uri AS uri, p.time_bounds_lower AS t0, p.time_bounds_upper AS t1 "
         "FROM spherex.artifact a JOIN spherex.plane p ON a.planeid = p.planeid "
         "WHERE a.uri LIKE '%level2%' "

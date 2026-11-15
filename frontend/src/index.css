@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@import "@fontsource/source-sans-3/400.css";
+@import "@fontsource/source-sans-3/400-italic.css";
+@import "@fontsource/source-sans-3/600.css";
+@import "@fontsource/source-serif-4/600.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+
+/* A plain, print-like palette: paper, ink, hairlines, one muted blue for links and selection.
+   Sky images always sit on near-black so their faint pixels read correctly.
+   Light values here; the dark ones below replace them when the reader picks Dark, or picks
+   System (the default) on a device set to dark. */
+@theme {
+  --color-paper: #fbfbfa;
+  --color-panel: #ffffff;
+  --color-rule: #dcdad6;
+  --color-rule-strong: #b5b2ac;
+  --color-ink: #1b1a19;
+  --color-muted: #55524d;
+  --color-faint: #77736d;
+  --color-accent: #1f4f86;
+  --color-accent-soft: #e9eff6;
+  --color-grid: #e9e7e3;
+  --color-danger: #b42318;
+  --color-sky: #0b0b0c;
+  --font-sans: "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-serif: "Source Serif 4", "Palatino Linotype", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-paper: #151515;
+    --color-panel: #1c1c1b;
+    --color-rule: #34332f;
+    --color-rule-strong: #4c4a45;
+    --color-ink: #e9e7e3;
+    --color-muted: #b3b0a9;
+    --color-faint: #8f8c85;
+    --color-accent: #8db6e8;
+    --color-accent-soft: #1f2a37;
+    --color-grid: #2b2a27;
+    --color-danger: #f0a196;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: #151515;
+  --color-panel: #1c1c1b;
+  --color-rule: #34332f;
+  --color-rule-strong: #4c4a45;
+  --color-ink: #e9e7e3;
+  --color-muted: #b3b0a9;
+  --color-faint: #8f8c85;
+  --color-accent: #8db6e8;
+  --color-accent-soft: #1f2a37;
+  --color-grid: #2b2a27;
+  --color-danger: #f0a196;
+}
+
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+body {
+  min-height: 100vh;
+  font-size: 16.5px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+/* The name at the top of each page: in the accent blue (lighter in dark mode), never underlined. */
+.wordmark {
+  font-family: "IBM Plex Sans", var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0; /* the font's own spacing keeps the m and b apart */
+  font-kerning: normal;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.wordmark:hover,
+.wordmark:focus-visible {
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

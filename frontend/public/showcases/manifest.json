@@ -1,0 +1,69 @@
+{
+ "showcases": [
+  {
+   "key": "barnard",
+   "name": "Barnard's Star",
+   "ra": 269.446223,
+   "dec": 4.768671,
+   "fov_arcmin": 5.0,
+   "n_frames": 18,
+   "elapsed_s": 3.495,
+   "events": "barnard/events.json",
+   "thumb": "frames/00_preview.png",
+   "note": "10.4 arcsec/yr: about 270 arcsec north of its J2000 position in 2026, so a 5 arcmin field centred on the J2000 position MISSES it. Saturates (V 9.5, J 5.2).",
+   "flags": "barnard/flags.json"
+  },
+  {
+   "key": "eps_indi_b",
+   "name": "Epsilon Indi B (brown dwarf pair)",
+   "ra": 331.09697,
+   "dec": -56.800771,
+   "fov_arcmin": 5.0,
+   "n_frames": 22,
+   "elapsed_s": 4.586,
+   "events": "eps_indi_b/events.json",
+   "thumb": "frames/00_preview.png",
+   "note": "Brown dwarf pair Ba/Bb, 0.7 arcsec apart, so unresolved at 6.15 arcsec. About 400 arcsec from Epsilon Indi A, so A is outside a 5 arcmin field. About 1.1 px of motion over the data so far: needs centroiding, not eyeballing.",
+   "flags": "eps_indi_b/flags.json"
+  },
+  {
+   "key": "wise0855",
+   "name": "WISE 0855",
+   "ra": 133.759961,
+   "dec": -7.242259,
+   "fov_arcmin": 10.0,
+   "n_frames": 16,
+   "elapsed_s": 5.478,
+   "events": "wise0855/events.json",
+   "thumb": "frames/00_preview.png",
+   "note": "Moved about 125 arcsec (20 px) west since the brief's position. Y4 dwarf, J 25: expect it only in the longest channels, if at all.",
+   "flags": "wise0855/flags.json"
+  },
+  {
+   "key": "r_dra",
+   "name": "R Draconis",
+   "ra": 248.167231,
+   "dec": 66.755024,
+   "fov_arcmin": 5.0,
+   "n_frames": 36,
+   "elapsed_s": 8.936,
+   "events": "r_dra/events.json",
+   "thumb": "frames/00_preview.png",
+   "note": "Mira variable near the north ecliptic pole: about 2,400 frames in 35 visits.",
+   "flags": "r_dra/flags.json"
+  },
+  {
+   "key": "rw_aur",
+   "name": "RW Aurigae",
+   "ra": 76.956587,
+   "dec": 30.40129,
+   "fov_arcmin": 5.0,
+   "n_frames": 18,
+   "elapsed_s": 3.237,
+   "events": "rw_aur/events.json",
+   "thumb": "frames/00_preview.png",
+   "note": "Young variable binary. Bright: check saturation.",
+   "flags": "rw_aur/flags.json"
+  }
+ ]
+}

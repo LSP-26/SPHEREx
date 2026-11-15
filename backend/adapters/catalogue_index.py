@@ -26,8 +26,13 @@ CONE_DEG = 2.6   # frame half-diagonal is 2.46 degrees (2040 px x 6.15 arcsec, c
 COLUMNS = ("frame_id", "detector", "obsid", "t_start", "t_end", "release", "version", "uri",
            "naxis1", "naxis2", "wcs_json", "planes_json")
 
-_SQL = f"""
-SELECT {", ".join(COLUMNS)} FROM frames
+_HEAVY = ", ".join(COLUMNS)
+
+# the cone cut runs on a small in-memory table (position, time, which shard and row); the big
+# text columns (the WCS is about 1.6 kB per frame, 3 GB for 1.6 million frames) stay in the
+# Parquet files and are read only for the few hundred frames near the target
+_SQL = """
+SELECT shard, row FROM frames
 WHERE dec_c BETWEEN ? AND ?
   AND 2 * asin(sqrt(least(1.0,
         pow(sin(radians(dec_c - ?) / 2), 2)
@@ -38,29 +43,52 @@ WHERE dec_c BETWEEN ? AND ?
 
 class CatalogueFrameIndex:
     """Implements contracts.interfaces.FrameIndex over the Parquet shards in `root`.
-    Loads every shard into memory once, at start-up."""
+    Keeps only a small table of frame centres in memory (about 0.4 GB for 1.6 million frames,
+    against 5.7 GB when every column was loaded); a query reads the full rows of its candidates
+    from the shard files."""
 
     def __init__(self, root: str | Path, cone_deg: float = CONE_DEG):
-        files = sorted(Path(root).glob("*.parquet"))
-        if not files:
+        self.files = [str(f) for f in sorted(Path(root).glob("*.parquet"))]
+        if not self.files:
             raise FileNotFoundError(f"no catalogue shards (*.parquet) in {root}")
         self.cone_deg = cone_deg
         self._lock = threading.Lock()
         self._con = duckdb.connect()
-        self._con.execute("CREATE TABLE frames AS SELECT * FROM read_parquet(?)",
-                          [[str(f) for f in files]])
+        self._con.execute("CREATE TABLE frames (ra_c DOUBLE, dec_c DOUBLE, t_start DOUBLE, "
+                          "shard USMALLINT, row UBIGINT)")
+        for i, f in enumerate(self.files):
+            self._con.execute(
+                "INSERT INTO frames SELECT ra_c, dec_c, t_start, ?, file_row_number "
+                "FROM read_parquet(?, file_row_number = true)", [i, f])
 
     @property
     def n_frames(self) -> int:
         with self._lock:
             return self._con.execute("SELECT count(*) FROM frames").fetchone()[0]
 
+    def _rows(self, pos: SkyPosition, lo: float, hi: float) -> list[tuple]:
+        with self._lock:
+            cands = self._con.execute(
+                _SQL, [lo, hi, pos.dec, pos.dec, pos.ra, self.cone_deg]).fetchall()
+        by_shard: dict[int, list[int]] = {}
+        for shard, row in cands:
+            by_shard.setdefault(shard, []).append(row)
+        rows: list[tuple] = []
+        cur = self._con.cursor()        # own connection: reading the files needs no lock
+        try:
+            for shard, rs in by_shard.items():
+                rows += cur.execute(
+                    f"SELECT {_HEAVY} FROM read_parquet(?, file_row_number = true) "
+                    "WHERE file_row_number IN (SELECT unnest(?))",
+                    [self.files[shard], rs]).fetchall()
+        finally:
+            cur.close()
+        return rows
+
     def _frames_at(self, pos: SkyPosition, margin_px: int) -> list[FrameRef]:
         lo = max(-90.0, pos.dec - self.cone_deg)
         hi = min(90.0, pos.dec + self.cone_deg)
-        with self._lock:
-            rows = self._con.execute(
-                _SQL, [lo, hi, pos.dec, pos.dec, pos.ra, self.cone_deg]).fetchall()
+        rows = self._rows(pos, lo, hi)
         out: list[FrameRef] = []
         for r in rows:
             rec = dict(zip(COLUMNS, r, strict=True))

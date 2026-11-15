@@ -1,7 +1,7 @@
 """All I/O sits behind these. Each has a Tier 0 and a Tier 1 implementation."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 from .arrays import Stamp
@@ -43,6 +43,7 @@ class Rendered:
     png: bytes
     width: int
     height: int
+    flags_summary: list[str] = field(default_factory=list)
 
 
 @runtime_checkable

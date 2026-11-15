@@ -65,3 +65,19 @@ def test_fixture_adapters_satisfy_interfaces():
     assert [f.t_start for f in frames] == sorted(f.t_start for f in frames)
     st = asyncio.run(src.fetch(frames[0], pos, 23))
     assert st.image.shape == (47, 47)
+
+
+def test_fill_is_in_the_url_only_when_it_is_turned_off():
+    from contracts.url_state import from_query, to_query
+    req = FlipbookRequest(ra=10, dec=0, fill=False)
+    assert to_query(req) == "ra=10&dec=0&fill=0"
+    assert from_query("ra=10&dec=0&fill=0").fill is False
+    assert from_query("ra=10&dec=0").fill is True
+
+
+def test_orientation_is_in_the_url_only_when_it_is_not_the_default():
+    from contracts import Orientation
+    req = FlipbookRequest(ra=10, dec=0, orient=Orientation.DETECTOR)
+    assert to_query(req) == "ra=10&dec=0&orient=detector"
+    assert from_query("ra=10&dec=0&orient=detector").orient == Orientation.DETECTOR
+    assert from_query("ra=10&dec=0").orient == Orientation.NORTH

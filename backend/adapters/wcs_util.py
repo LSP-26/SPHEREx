@@ -2,9 +2,14 @@
 
 celestial_wcs builds the RA/Dec + SIP WCS of a SPHEREx frame from the catalogue's header dict.
 The fast path sets the astropy objects directly. Going through a fits.Header and WCS(header)
-cost about 11 ms per frame (measured on R Draconis: 98 % of a catalogue lookup,
+cost about 11 ms per frame (measured on R Draconis, 2026-10-31: 98 % of a catalogue lookup,
 27 s for 2,482 frames). celestial_wcs_reference is the slow, obviously correct version, kept
 as the yardstick for the tests and scripts/check_fast_wcs.py.
+
+SPHEREx headers carry SIP coefficients (A_ORDER, ...) but a plain TAN CTYPE. astropy applies the
+SIP terms anyway and logs a long INFO message about the missing "-SIP" suffix every time such a
+WCS is copied or sliced (once per frame). The fast path therefore adds the suffix itself when SIP
+terms are present. The numbers do not change, only the noise.
 """
 import re
 
@@ -43,7 +48,11 @@ def _sip_matrix(h, name):
 
 def _fast(h):
     w = WCS(naxis=2)
-    w.wcs.ctype = [str(h["CTYPE1"]), str(h["CTYPE2"])]
+    ctype = [str(h["CTYPE1"]), str(h["CTYPE2"])]
+    has_sip = int(h.get("A_ORDER", 0)) > 1     # astropy ignores SIP of order 1 or less, so do we
+    if has_sip:
+        ctype = [c if c.endswith("-SIP") else c + "-SIP" for c in ctype]
+    w.wcs.ctype = ctype
     w.wcs.crval = [float(h["CRVAL1"]), float(h["CRVAL2"])]
     w.wcs.crpix = [float(h["CRPIX1"]), float(h["CRPIX2"])]
     if "CD1_1" in h or "CD2_2" in h:
@@ -59,7 +68,7 @@ def _fast(h):
             setattr(w.wcs, attr, float(h[key]))
     if "RADESYS" in h:
         w.wcs.radesys = str(h["RADESYS"])
-    if int(h.get("A_ORDER", 0)) > 1:   # astropy ignores SIP of order 1 or less, so do we
+    if has_sip:
         w.sip = Sip(_sip_matrix(h, "A"), _sip_matrix(h, "B"),
                     _sip_matrix(h, "AP"), _sip_matrix(h, "BP"), np.array(w.wcs.crpix))
     w.wcs.set()

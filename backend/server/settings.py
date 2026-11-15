@@ -7,39 +7,51 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 SOURCES = ("fixtures", "catalogue")
+WAVELENGTH_MODES = ("stub", "table")
 
 
 @dataclass(frozen=True)
 class Settings:
     source: str = "fixtures"            # "fixtures": committed demo stamps, no network at all
     #                                     "catalogue": real frames, S3 range reads
-    catalogue_dir: str = ".cache/catalogue_targets"
+    catalogue_dir: str = ".cache/catalogue"
     cache_dir: str | None = ".cache/api_cache"     # None keeps rendered frames in memory only
     fixture_root: str | None = None     # default: the repository's fixtures/ directory
+    wavelength: str = "table"           # catalogue mode: "table" = real wavelengths from each
+    #                                     frame's own spectral WCS, "stub" = fixed per detector
+    wavelength_dir: str | None = ".cache/wavelength"   # saved tables, so a restart reads none
     fake_latency_s: float = 0.0         # fixtures: frame i arrives (i + 1) x this late
     heartbeat_s: float = 15.0           # idle stream sends a heartbeat event this often
-    idle_cancel_s: float = 30.0         # a running job nobody watches for this long is cancelled
+    idle_cancel_s: float = 120.0        # a running job nobody watches for this long is cancelled
     job_ttl_s: float = 600.0            # finished jobs are kept (for replay and polling) this long
-    max_running: int = 8                # jobs running at once, the rest wait for a slot
+    max_running: int = 3                # jobs running at once, the rest wait for a slot (RAM)
     max_jobs: int = 500
+    refine: bool = False                # run the refine stage (co-adds) after the preview
     cors_origins: tuple[str, ...] = ("*",)
 
     def __post_init__(self) -> None:
         if self.source not in SOURCES:
             raise ValueError(f"source must be one of {SOURCES}, not {self.source!r}")
+        if self.wavelength not in WAVELENGTH_MODES:
+            raise ValueError(f"wavelength must be one of {WAVELENGTH_MODES}, "
+                             f"not {self.wavelength!r}")
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
         env = os.environ if env is None else env
         d = cls()
         cache = env.get("SPHEREX_CACHE", d.cache_dir or "")
+        wl_dir = env.get("SPHEREX_WAVELENGTH_DIR", d.wavelength_dir or "")
         origins = tuple(o.strip() for o in env.get("SPHEREX_CORS", "*").split(",") if o.strip())
         return cls(
             source=env.get("SPHEREX_SOURCE", d.source),
             catalogue_dir=env.get("SPHEREX_CATALOGUE", d.catalogue_dir),
             cache_dir=cache or None,
             fixture_root=env.get("SPHEREX_FIXTURES") or None,
+            wavelength=env.get("SPHEREX_WAVELENGTH", d.wavelength),
+            wavelength_dir=wl_dir or None,
             fake_latency_s=float(env.get("SPHEREX_FAKE_LATENCY", d.fake_latency_s)),
             heartbeat_s=float(env.get("SPHEREX_HEARTBEAT", d.heartbeat_s)),
+            refine=env.get("SPHEREX_REFINE", "") in ("1", "true"),
             cors_origins=origins or d.cors_origins,
         )

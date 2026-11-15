@@ -46,7 +46,8 @@ def even_subsample(items: Sequence[T], k: int) -> list[T]:
 
 
 def simple_select(frames: list[FrameRef], req: FlipbookRequest) -> Selection:
-    """Fallback: every frame is its own 'visit'. Used by the job until O2.2 wires in P4.1."""
+    """Fallback selector: every frame is its own 'visit'.
+    Used when no selector is given; the server uses make_selector."""
     ordered = sorted(frames, key=lambda f: f.t_start)
     pairs = even_subsample(list(enumerate(ordered)), req.preview_cap)
     return Selection(visits_total=len(ordered), visits_shown=len(pairs),
@@ -177,5 +178,27 @@ def make_selector(lambda_of: LambdaOf | None = None, gap_days: float | None = No
                         key=lambda fv: (fv[0].t_mid, fv[0].detector))
         chosen = even_subsample(chosen, req.preview_cap)
         return Selection(visits_total=len(visits), visits_shown=len(shown), chosen=chosen)
+
+    return select
+
+
+def make_spectral_selector(lambda_of: LambdaOf | None) -> Selector:
+    """A selector for the wavelength flipbook: frames from every visit, sorted by the wavelength
+    at the target, spread evenly over them (shortest first). Frames whose wavelength is unknown
+    are left out. The visit index of each frame is kept, so the page can still tell the dates
+    apart."""
+
+    def select(frames: list[FrameRef], req: FlipbookRequest) -> Selection:
+        visit_of = {fid: v.visit_index for v in cluster_visits(frames) for fid in v.frame_ids}
+        rows = []
+        for f in frames:
+            lam = lambda_of(f) if lambda_of else None
+            if lam is not None and lam > 0:
+                rows.append((lam, f))
+        rows.sort(key=lambda r: (r[0], r[1].t_mid, r[1].detector))
+        picked = even_subsample(rows, req.preview_cap)
+        chosen = [(f, visit_of.get(f.frame_id, 0)) for _, f in picked]
+        return Selection(visits_total=len(set(visit_of.values())),
+                         visits_shown=len({v for _, v in chosen}), chosen=chosen)
 
     return select

@@ -23,6 +23,12 @@ class Plane(str, Enum):
 class ViewMode(str, Enum):
     SKY = "sky"
     MOVER = "mover"  # follow-the-mover (Tier 1)
+    SPECTRAL = "spectral"  # frames from every visit, sorted by wavelength (the Wavelengths tab)
+
+
+class Orientation(str, Enum):
+    NORTH = "north"        # regridded so north is up and east is left (default)
+    DETECTOR = "detector"  # as the detector saw it: no regridding, so no black corners
 
 
 class Stage(str, Enum):
@@ -59,6 +65,9 @@ class FlipbookRequest(_M):
     preview_cap: int = Field(default=36, ge=1, le=200)
     use_zodi: bool = True
     release: str | None = Field(default=None, description="None = latest")
+    orient: Orientation = Orientation.NORTH
+    fill: bool = Field(default=True, description="False = leave broken pixels as holes in the "
+                       "picture instead of filling them from their neighbours")
 
 
 # ---------------------------------------------------------------- frames

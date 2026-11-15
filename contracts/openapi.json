@@ -441,12 +441,46 @@
     }
   },
   "info": {
-    "description": "The HTTP API.\n\n  POST   /flipbook?ra=..&dec=..       start (or join) a job. Returns a JobHandle at once.\n  GET    /flipbook/{job}/stream       the job's events as server-sent events\n  GET    /flipbook/{job}/events       the same events by polling: ?after=N&wait=SECONDS\n  DELETE /flipbook/{job}              cancel\n  GET    /flipbook?ra=..&dec=..       shortcut: start (or join) and stream in one request\n  GET    /frames/{key}.png            a rendered frame (immutable, cache it forever)\n  GET    /health, /fixtures           status; demo positions when running on fixtures\n\nQuery parameters are the URL state of the page (see contracts.url_state): ra, dec, fov, view,\ndet, lmin, lmax, cap, zodi, release. Everything except ra and dec is optional.\n\nStreaming behind proxies: the stream sends X-Accel-Buffering: no, a 2 KB preamble, and a\nheartbeat event every heartbeat_s. If a proxy buffers anyway, the client starts a job with POST\n(plain JSON, never buffered for long) and polls instead of streaming.\n",
+    "description": "The HTTP API.\n\n  POST   /flipbook?ra=..&dec=..       start (or join) a job. Returns a JobHandle at once.\n  GET    /flipbook/{job}/stream       the job's events as server-sent events\n  GET    /flipbook/{job}/events       the same events by polling: ?after=N&wait=SECONDS\n  DELETE /flipbook/{job}              cancel\n  GET    /flipbook?ra=..&dec=..       shortcut: start (or join) and stream in one request\n  GET    /frames/{key}.png            a rendered frame (immutable, cache it forever)\n  GET    /overlay?ra=..&dec=..&fov=.. Gaia stars on the flipbook's picture, as JSON\n  GET    /difference?ra&dec&fov&a=<frame id>&b=<frame id>  B minus A in flux units, as a PNG\n  GET    /flags?ra&dec&fov&frame=<frame id>[&orient=detector]  the frame's flagged pixels, coloured\n  GET    /coverage?ra&dec          every frame of the spot, grouped in visits like the flipbook\n  GET    /measure?ra&dec               light curve and spectrum of any position (poll it)\n  GET    /movers?ra&dec&fov[&visit=N]  search one visit for moving objects, checked with SkyBoT\n  GET    /health, /fixtures           status; demo positions when running on fixtures\n\nQuery parameters are the URL state of the page (see contracts.url_state): ra, dec, fov, view,\ndet, lmin, lmax, cap, zodi, release, orient, fill. Everything except ra and dec is optional.\nview=spectral gives the Wavelengths tab: the same job and events, frames sorted by wavelength.\n\nStreaming behind proxies: the stream sends X-Accel-Buffering: no, a 2 KB preamble, and a\nheartbeat event every heartbeat_s. If a proxy buffers anyway, the client starts a job with POST\n(plain JSON, never buffered for long) and polls instead of streaming.\n",
     "title": "SPHEREx Flipbook API",
     "version": "0.3.0"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/coverage": {
+      "get": {
+        "description": "When SPHEREx looked at this spot: every frame (mid time, detector) and the visits,\ncut the same way the flipbook's selector cuts them (select.cluster_visits).",
+        "operationId": "coverage_route_coverage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Coverage Route"
+      }
+    },
+    "/difference": {
+      "get": {
+        "description": "B minus A for two frames of the field centred on (ra, dec), in flux units, as a\npicture (grey is no change) plus the numbers needed to read it (pipeline/difference).",
+        "operationId": "difference_route_difference_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Difference Route"
+      }
+    },
     "/fixtures": {
       "get": {
         "description": "Demo positions that have data when the server runs on fixtures (empty otherwise).",
@@ -469,6 +503,23 @@
           }
         },
         "summary": "Fixtures"
+      }
+    },
+    "/flags": {
+      "get": {
+        "description": "Where the pipeline flagged pixels in one frame of the field, as an RGBA layer laid out\nlike the frame's picture, plus the fraction of each group (pipeline/flagmap.py).",
+        "operationId": "flags_route_flags_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Flags Route"
       }
     },
     "/flipbook": {
@@ -716,6 +767,80 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/measure": {
+      "get": {
+        "description": "Light curve and rough spectrum of whatever is at ra, dec (backend/jobs/measure.py).\nIt takes a while, so the first call starts the run and every call returns its state:\n{status: running, done, total} or {status: done, result} or {status: error, message}.\nPoll it (the tunnel does not stream). A finished result is cached.",
+        "operationId": "measure_route_measure_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Measure Route"
+      }
+    },
+    "/movers": {
+      "get": {
+        "description": "Search one visit of the field for moving objects (backend/jobs/movers.py): tracks,\neach marked with its SkyBoT name or as a candidate, the known objects that crossed the\nfield, and a picture (the best burst S/N per pixel) to draw the tracks on.",
+        "operationId": "movers_route_movers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Movers Route"
+      }
+    },
+    "/overlay": {
+      "get": {
+        "description": "Gaia DR3 stars on the picture of a flipbook centred on (ra, dec): pixel position,\nfraction of the picture and velocity in px/yr (see backend/pipeline/overlay.py).",
+        "operationId": "overlay_overlay_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Overlay"
+      }
+    },
+    "/targets": {
+      "get": {
+        "operationId": "targets_targets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Targets Targets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Targets"
       }
     }
   }

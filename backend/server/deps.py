@@ -4,12 +4,15 @@ fixtures   The committed demo stamps under fixtures/. No network at all, so the 
            built and demonstrated offline. Only positions near a fixture have data. With
            fake_latency_s > 0, frame i arrives (i + 1) x that late, which makes the stream look
            like a slow real one.
-catalogue  Real frames: CatalogueFrameIndex plus S3 range reads. Wavelengths and the renderer
-           are still the stubs (greyscale, fixed per-detector wavelength) until D5.1 and P3.2.
+catalogue  Real frames: CatalogueFrameIndex plus S3 range reads. Wavelengths come from each
+           frame's own spectral WCS (TableWavelength, one table per detector and version, saved
+           under settings.wavelength_dir), or are fixed per detector with wavelength="stub".
+           The renderer is RealRenderer.
 """
 from __future__ import annotations
 
 import asyncio
+import logging
 import math
 from pathlib import Path
 
@@ -27,14 +30,17 @@ from backend.adapters.s3_stamps import S3StampSource
 from backend.adapters.stubs import (
     DelayedStampSource,
     MemoryCache,
-    StubRenderer,
     StubWavelength,
 )
-from backend.pipeline.select import make_selector
+from backend.adapters.wavelength import TableWavelength, make_lambda_of
+from backend.pipeline.render import RealRenderer
+from backend.pipeline.select import make_selector, make_spectral_selector
 from backend.server.jobs import Deps, NoData
 from backend.server.settings import Settings
-from contracts import FlipbookRequest
-from contracts.interfaces import Cache
+from contracts import FlipbookRequest, FrameRef, SkyPosition, ViewMode
+from contracts.interfaces import Cache, FrameIndex
+
+log = logging.getLogger(__name__)
 
 FIXTURE_MATCH_DEG = 1.0
 
@@ -46,6 +52,25 @@ def make_cache(settings: Settings) -> Cache:
 def _separation_deg(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
     dra = (ra1 - ra2 + 180.0) % 360.0 - 180.0
     return math.hypot(dra * math.cos(math.radians((dec1 + dec2) / 2)), dec1 - dec2)
+
+
+class PrefetchingIndex:
+    """A FrameIndex that, after each lookup, loads the wavelength table of every
+    (detector, version) among the frames it found. Frames only exist once the lookup has run, so
+    this is the earliest point to prefetch. Afterwards TableWavelength.lambda_um is a lookup in
+    memory, which is what the selector and the labels need. A failure to load some table is
+    logged, not raised: the selector then falls back for frames with no wavelength."""
+
+    def __init__(self, inner: FrameIndex, wavelength: TableWavelength):
+        self.inner, self.wavelength = inner, wavelength
+
+    async def frames_at(self, pos: SkyPosition, margin_px: int = 30) -> list[FrameRef]:
+        frames = await self.inner.frames_at(pos, margin_px)
+        try:
+            await self.wavelength.prefetch(frames)
+        except Exception:
+            log.exception("could not load every wavelength table")
+        return frames
 
 
 class FixtureDeps:
@@ -74,9 +99,12 @@ class FixtureDeps:
         stamps = DelayedStampSource(
             FixtureStampSource(name, self.root),
             delay=lambda f: self.s.fake_latency_s * (order.get(f.frame_id, 0) + 1))
+        wavelength = StubWavelength()
+        select = (make_spectral_selector(lambda f: wavelength.lambda_um(f, 0.0, 0.0))
+                  if req.view == ViewMode.SPECTRAL else make_selector(None))
         return Deps(index=FixtureFrameIndex(name, self.root), stamps=stamps,
-                    wavelength=StubWavelength(), renderer=StubRenderer(), cache=self.cache,
-                    select=make_selector(None))
+                    wavelength=wavelength, renderer=RealRenderer(), cache=self.cache,
+                    select=select)
 
     async def aclose(self) -> None:
         pass
@@ -89,14 +117,28 @@ class CatalogueDeps:
         limiter = HostLimiter()                                      # one cap for all jobs
         self._stamps = {True: S3StampSource(limiter=limiter, use_zodi=True),
                         False: S3StampSource(limiter=limiter, use_zodi=False)}
+        self._wavelength = (TableWavelength(cache_dir=settings.wavelength_dir)
+                            if settings.wavelength == "table" else None)
+        self._index: FrameIndex = (PrefetchingIndex(self.index, self._wavelength)
+                                   if self._wavelength else self.index)
 
     def listing(self) -> list[dict]:
         return []
 
     async def __call__(self, req: FlipbookRequest) -> Deps:
-        return Deps(index=self.index, stamps=self._stamps[req.use_zodi],
-                    wavelength=StubWavelength(), renderer=StubRenderer(), cache=self.cache,
-                    select=make_selector(None))
+        spectral = req.view == ViewMode.SPECTRAL
+        if self._wavelength is None:
+            wavelength = StubWavelength()
+            select = (make_spectral_selector(lambda f: wavelength.lambda_um(f, 0.0, 0.0))
+                      if spectral else make_selector(None))
+        else:
+            pos = SkyPosition(ra=req.ra, dec=req.dec)
+            wavelength = self._wavelength
+            lambda_of = make_lambda_of(self._wavelength, pos)
+            select = make_spectral_selector(lambda_of) if spectral else make_selector(lambda_of)
+        return Deps(index=self._index, stamps=self._stamps[req.use_zodi],
+                    wavelength=wavelength, renderer=RealRenderer(), cache=self.cache,
+                    select=select)
 
     async def aclose(self) -> None:
         for s in self._stamps.values():

@@ -24,6 +24,7 @@ class Rows:
 
 
 def run(tmp_path, now, rows=None, **kw):
+    kw.setdefault("redo_days", 0.0)
     logs = []
     rows = rows or Rows()
     built = refresh(tmp_path, now=now, rows_fn=rows, reader=fake_reader, log=logs.append, **kw)
@@ -65,3 +66,11 @@ def test_dry_run_builds_nothing(tmp_path):
 def test_max_windows_stops_early(tmp_path):
     built, rows, _ = run(tmp_path, now=60737.5, max_windows=1)
     assert len(built) == 1 and rows.calls == [(60700.0, 60714.0)]
+
+
+def test_recent_shards_are_rebuilt(tmp_path):
+    run(tmp_path, now=60737.5)                       # shards up to 60735.5
+    built, rows, logs = run(tmp_path, now=60740.0, redo_days=5.0)
+    assert any("deleted shard_60728.0_60735.5" in line for line in logs)
+    assert rows.calls == [(60728.0, 60738.0)]
+    assert [p.name for p in built] == ["shard_60728.0_60738.0.parquet"]

@@ -1,0 +1,20 @@
+{
+ "lightcurves": [
+  {
+   "key": "r_dra",
+   "name": "R Draconis",
+   "file": "r_dra.json",
+   "n_points": 2358,
+   "n_ok": 2356,
+   "n_lower_limit": 2356
+  },
+  {
+   "key": "rw_aur",
+   "name": "RW Aurigae",
+   "file": "rw_aur.json",
+   "n_points": 320,
+   "n_ok": 313,
+   "n_lower_limit": 293
+  }
+ ]
+}

@@ -31,6 +31,7 @@ def test_health_fixtures_and_openapi(live):
     s, c = live
     h = c.get("/health").json()
     assert h["status"] == "ok" and h["source"] == "fixtures" and h["contract"] == "0.3.0"
+    assert h["render_version"] >= 10 and h["refine_version"] >= 4
     fx = c.get("/fixtures").json()
     assert fx[0]["name"] == "synthetic_test" and fx[0]["ra"] == 10.0 and fx[0]["synthetic"]
     paths = c.get("/openapi.json").json()["paths"]
@@ -211,3 +212,70 @@ def test_more_jobs_than_slots_all_finish():
                 body = PollResponse(**c.get(f"/flipbook/{job_id}/events",
                                             params={"after": body.next, "wait": 20}).json())
             assert body.events[-1].type == "done"
+
+
+def test_difference_route_checks_its_input_and_subtracts_same_detector_frames(live):
+    s, c = live
+    _, events = read_sse(c, f"/flipbook?{POS}")
+    labels = [e.data["label"] for e in events if e.data["type"] == "frame"]
+    by_det: dict[int, list[str]] = {}
+    for lab in labels:
+        by_det.setdefault(lab["detector"], []).append(lab["frame_id"])
+    base = "/difference?ra=10&dec=0&fov=5"
+    assert c.get(base).status_code == 422                               # no frames named
+    assert c.get(f"{base}&a={labels[0]['frame_id']}&b={labels[0]['frame_id']}").status_code == 422
+    assert c.get(f"{base}&a=nope&b=nada").status_code == 404
+    dets = sorted(by_det)
+    if len(dets) > 1:                                                   # different detectors
+        r = c.get(f"{base}&a={by_det[dets[0]][0]}&b={by_det[dets[1]][0]}")
+        assert r.status_code == 422 and "detector" in r.json()["message"]
+    pair = next((ids[:2] for ids in by_det.values() if len(ids) >= 2), None)
+    if pair:
+        r = c.get(f"{base}&a={pair[0]}&b={pair[1]}")
+        assert r.status_code in (200, 422), r.text
+        if r.status_code == 200:
+            meta = r.json()
+            assert meta["unit"] == "MJy/sr" and 0 < meta["covered_fraction"] <= 1
+            assert c.get(meta["png_url"]).headers["content-type"] == "image/png"
+            assert c.get(f"{base}&a={pair[0]}&b={pair[1]}").json() == meta     # cached, same answer
+
+
+def test_flags_route_maps_a_frames_flagged_pixels(live):
+    s, c = live
+    _, events = read_sse(c, f"/flipbook?{POS}")
+    fid = next(e.data["label"]["frame_id"] for e in events if e.data["type"] == "frame")
+    base = "/flags?ra=10&dec=0&fov=5"
+    assert c.get(base).status_code == 422
+    assert c.get(f"{base}&frame=colour_v0").status_code == 404
+    for orient in ("", "&orient=detector"):
+        r = c.get(f"{base}&frame={fid}{orient}")
+        assert r.status_code == 200, r.text
+        meta = r.json()
+        assert [k["key"] for k in meta["categories"]][:2] == ["hidden", "saturated"]
+        assert all(0 <= k["fraction"] <= 1 for k in meta["categories"])
+        png = c.get(meta["png_url"])
+        assert png.headers["content-type"] == "image/png" and png.content[25] == 6  # RGBA
+        assert c.get(f"{base}&frame={fid}{orient}").json() == meta
+
+
+def test_coverage_route_lists_every_frame_in_visits(live):
+    s, c = live
+    body = c.get("/coverage?ra=10&dec=0").json()
+    assert body["n_frames"] == 6 and len(body["frames"]) == 6   # the fixture: 6 frames, 2 visits
+    assert len(body["visits"]) == 2 and sum(v["n_frames"] for v in body["visits"]) == 6
+    assert body["frames"] == sorted(body["frames"])
+    assert c.get("/coverage?ra=200&dec=-80").json()["n_frames"] == 0   # nothing there
+    assert c.get("/coverage?dec=0").status_code == 422
+
+
+def test_spectral_view_streams_the_frames_sorted_by_wavelength(live):
+    s, c = live
+    r, events = read_sse(c, f"/flipbook?{POS}&view=spectral")
+    assert r.status_code == 200
+    frames = [e.data for e in events if e.data["type"] == "frame"]
+    assert len(frames) > 1
+    by_slot = sorted(frames, key=lambda f: f["slot"])
+    lams = [f["label"]["lambda_um"] for f in by_slot]
+    assert lams == sorted(lams)
+    assert all(f["stage"] == "preview" for f in frames)       # no co-adds in this view
+    assert types(events)[-1] == "done"

@@ -18,7 +18,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
-from backend.jobs.preview import run_preview
+from backend.jobs.flipbook import run_flipbook
 from backend.pipeline.select import Selector
 from backend.server.settings import Settings
 from contracts import (
@@ -28,6 +28,7 @@ from contracts import (
     Event,
     FlipbookRequest,
     HeartbeatEvent,
+    ViewMode,
 )
 from contracts.interfaces import Cache, FrameIndex, Renderer, StampSource, WavelengthSource
 
@@ -138,21 +139,26 @@ class JobRunner:
     # ------------------------------------------------------------ running
     async def _run(self, job: Job) -> None:
         try:
+            await job.publish(HeartbeatEvent())   # at once, even while queued
             async with self._slots:
                 if job.cancel.is_set():
-                    await job.publish(ErrorEvent(code=ErrorCode.CANCELLED, message="Cancelled."))
+                    await job.publish(ErrorEvent(
+                        code=ErrorCode.CANCELLED, message="Cancelled.", retryable=True))
                     return
                 try:
                     deps = await self.make_deps(job.request)
                 except NoData as e:
-                    await job.publish(HeartbeatEvent())
                     await job.publish(ErrorEvent(code=ErrorCode.NO_COVERAGE, message=str(e)))
                     return
-                async for ev in run_preview(job.request, **deps.kwargs(), cancel=job.cancel,
-                                            job_id=job.id):
+                refine = self.s.refine and job.request.view != ViewMode.SPECTRAL
+                async for ev in run_flipbook(job.request, refine=refine, **deps.kwargs(),
+                                             cancel=job.cancel, job_id=job.id):
+                    if isinstance(ev, HeartbeatEvent):
+                        continue          # already sent above
                     await job.publish(ev)
         except asyncio.CancelledError:      # server shutting down
-            await job.publish(ErrorEvent(code=ErrorCode.CANCELLED, message="Cancelled."))
+            await job.publish(ErrorEvent(
+                code=ErrorCode.CANCELLED, message="Cancelled.", retryable=True))
             raise
         except Exception:
             log.exception("job %s failed", job.id)

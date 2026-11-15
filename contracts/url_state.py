@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from urllib.parse import parse_qsl, urlencode
 
-from .models import FlipbookRequest, ViewMode
+from .models import FlipbookRequest, Orientation, ViewMode
 
 _SHORT = {"fov_arcmin": "fov", "detector": "det", "lambda_min_um": "lmin",
           "lambda_max_um": "lmax", "preview_cap": "cap", "use_zodi": "zodi"}
@@ -29,4 +29,8 @@ def from_query(qs: str) -> FlipbookRequest:
         raw["use_zodi"] = raw["use_zodi"] in ("1", "true", "True")
     if "view" in raw:
         raw["view"] = ViewMode(raw["view"])
+    if "fill" in raw:
+        raw["fill"] = raw["fill"] in ("1", "true", "True")
+    if "orient" in raw:
+        raw["orient"] = Orientation(raw["orient"])
     return FlipbookRequest(**raw)

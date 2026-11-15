@@ -11,3 +11,5 @@ dist/
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
+.DS_Store
+CLAUDE.md

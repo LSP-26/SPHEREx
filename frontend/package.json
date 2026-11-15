@@ -1,5 +1,5 @@
 {
-  "name": "spherex-flipbook-frontend",
+  "name": "tombaugh-frontend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -13,6 +13,9 @@
     "types": "node scripts/generate-types.mjs"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/source-sans-3": "^5.3.1",
+    "@fontsource/source-serif-4": "^5.3.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

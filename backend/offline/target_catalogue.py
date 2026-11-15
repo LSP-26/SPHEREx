@@ -52,7 +52,7 @@ TARGETS: dict[str, tuple[float, float]] = {
     "control": (161.25, 58.0),
 }
 
-# Footprint column names to try, in order. Not confirmed against IRSA's live schema.
+# Footprint column names to try, in order; the first one IRSA accepts is used.
 REGION_COLUMNS = ("poly", "s_region", "position_bounds")
 ADQL = ("SELECT a.uri AS uri, p.time_bounds_lower AS t0, p.time_bounds_upper AS t1 "
         "FROM spherex.artifact a JOIN spherex.plane p ON a.planeid = p.planeid "

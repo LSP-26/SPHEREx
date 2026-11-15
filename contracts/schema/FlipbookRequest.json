@@ -1,9 +1,18 @@
 {
   "$defs": {
+    "Orientation": {
+      "enum": [
+        "north",
+        "detector"
+      ],
+      "title": "Orientation",
+      "type": "string"
+    },
     "ViewMode": {
       "enum": [
         "sky",
-        "mover"
+        "mover",
+        "spectral"
       ],
       "title": "ViewMode",
       "type": "string"
@@ -100,6 +109,16 @@
       "default": null,
       "description": "None = latest",
       "title": "Release"
+    },
+    "orient": {
+      "$ref": "#/$defs/Orientation",
+      "default": "north"
+    },
+    "fill": {
+      "default": true,
+      "description": "False = leave broken pixels as holes in the picture instead of filling them from their neighbours",
+      "title": "Fill",
+      "type": "boolean"
     }
   },
   "required": [
