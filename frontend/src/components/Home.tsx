@@ -53,14 +53,11 @@ export function Home({ showcases, onGo, problem }: { showcases: Showcase[]; onGo
         {problem && <p role="alert" className="mt-2 text-sm text-danger">This link has a problem: {problem}</p>}
       </section>
 
-      <div className="mt-8 grid items-stretch gap-8 md:grid-cols-[31rem_1fr]">
+      <div className="mt-8 grid items-stretch gap-8 lg:grid-cols-[minmax(18rem,28rem)_minmax(0,1fr)]">
         <MovingStar showcases={showcases} />
 
         <section className="flex min-w-0 flex-col" aria-label="Test targets">
           <h2 className="text-lg font-semibold leading-none">Test targets</h2>
-          <p className="mt-1 text-sm text-muted">
-            The five challenge objects. Their frames are stored with the site, so they open without a server.
-          </p>
           <ul className="mt-3 flex flex-1 flex-col divide-y divide-rule border-y border-rule">
             {EXAMPLES.map((ex) => (
               <li key={ex.key} className="flex flex-1">
@@ -78,42 +75,46 @@ export function Home({ showcases, onGo, problem }: { showcases: Showcase[]; onGo
         </section>
       </div>
 
-      <section className="mt-24 max-w-4xl space-y-3 leading-relaxed" aria-label="Method">
-        <h2 className="text-lg font-semibold">Method</h2>
-        <ol className="list-decimal space-y-2 pl-5">
-          <li>
-            <span className="font-semibold">Frames.</span> A position falls at nearly the same wavelength on a given detector
-            every pass, so frames are compared within one detector only. Differences then come from the sky, not the instrument.
-          </li>
-          <li>
-            <span className="font-semibold">Display.</span> The server cleans flagged pixels and resamples onto a north-up grid
-            (6.15″ pixels). Blink plays the frames in order. Difference subtracts the most distant epoch after normalising each
-            frame by its sky level and noise, so static sources cancel.
-          </li>
-          <li>
-            <span className="font-semibold">Identification.</span> Gaia DR3 stars are drawn at each frame's epoch using their
-            proper motions, and known asteroids come from IMCCE SkyBoT. Click a pixel to look it up in SIMBAD or, with the
-            server running, measure it in every frame for a light curve and spectrum.
-          </li>
-        </ol>
-      </section>
+      <div className="mt-16 grid gap-10 border-t border-rule pt-8 leading-relaxed md:grid-cols-3 md:gap-8">
+        <section className="space-y-3" aria-label="Method">
+          <h2 className="text-lg font-semibold">Method</h2>
+          <ol className="list-decimal space-y-2 pl-5 text-sm">
+            <li>
+              <span className="font-semibold">Frames.</span> A position falls at nearly the same wavelength on a given detector
+              every pass, so frames are compared within one detector only. Differences then come from the sky, not the instrument.
+            </li>
+            <li>
+              <span className="font-semibold">Display.</span> The server cleans flagged pixels and resamples onto a north-up grid
+              (6.15″ pixels). Blink plays the frames in order. Difference subtracts the most distant epoch after normalising each
+              frame by its sky level and noise, so static sources cancel.
+            </li>
+            <li>
+              <span className="font-semibold">Identification.</span> Gaia DR3 stars are drawn at each frame's epoch using their
+              proper motions, and known asteroids come from IMCCE SkyBoT. Click a pixel to look it up in SIMBAD or, with the
+              server running, measure it in every frame for a light curve and spectrum.
+            </li>
+          </ol>
+        </section>
 
-      <section className="mt-10 max-w-4xl space-y-2 text-sm leading-relaxed text-muted" aria-label="Limitations">
-        <h2 className="text-lg font-semibold text-ink">Data and limitations</h2>
-        <p>
-          Single frames are shallower than the final survey. Pixels are 6.15″, so motions below about 3″ per year are hard to
-          see by eye over the current baseline. Bright stars saturate. The colour view is false colour and not flux-calibrated.
-        </p>
-      </section>
-      <section className="mt-10 space-y-3 max-w-4xl border-t border-rule pt-6 leading-relaxed">
-        <p>
-          SPHEREx maps the whole sky every six months at 0.75 to 5 µm. Pick a position and Tombaugh shows every frame of it
-          in time order, one detector at a time, so anything that moves or varies stands out.
-        </p>
-        <p className="text-sm text-muted">
-          Named after Clyde Tombaugh, who found Pluto in 1930 by blinking photographic plates of the same field.
-        </p>
-      </section>
+        <section className="space-y-3 text-sm text-muted" aria-label="Limitations">
+          <h2 className="text-lg font-semibold text-ink">Data and limitations</h2>
+          <p>
+            Single frames are shallower than the final survey. Pixels are 6.15″, so motions below about 3″ per year are hard to
+            see by eye over the current baseline. Bright stars saturate. The colour view is false colour and not flux-calibrated.
+          </p>
+        </section>
+
+        <section className="space-y-3" aria-label="About">
+          <h2 className="text-lg font-semibold">About</h2>
+          <p className="text-sm">
+            SPHEREx maps the whole sky every six months at 0.75 to 5 µm. Pick a position and Tombaugh shows every frame of it
+            in time order, one detector at a time, so anything that moves or varies stands out.
+          </p>
+          <p className="text-sm text-muted">
+            Named after Clyde Tombaugh, who found Pluto in 1930 by blinking photographic plates of the same field.
+          </p>
+        </section>
+      </div>
 
     </main>
   );
