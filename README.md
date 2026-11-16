@@ -30,6 +30,11 @@ detector at about the same wavelength on every pass. Tombaugh uses that:
   (Harvard CfA mirror), a copyable report, and, with the server running, photometry in every SPHEREx
   frame covering it: a light curve (one point per visit, median with range) and a spectrum with the
   bands of common molecules (H₂O, CO, CH₄, CO₂, ices) marked.
+- **Moving objects (experimental).** With the server running, *Search for moving objects* looks in one
+  visit (the busiest by default, or one you pick) for things that move in a straight line between SPHEREx
+  bursts (`GET /movers`, `backend/pipeline/movers.py`). Each track is checked against SkyBoT: a match gets its
+  name, anything else is only a candidate, not a discovery. Fields wider than 30′ are searched in the centre.
+  How well it finds things on real frames is measured with `scripts/check_movers.py`.
 - **Light or dark.** A System / Light / Dark switch in the header, remembered per browser.
 - **Links and embeds.** The URL is the view (`?ex=barnard&band=2&mode=diff`,
   `?ra=133.79&dec=-7.24&fov=10`). Add `embed=1` for an `<iframe>` with just the viewer.

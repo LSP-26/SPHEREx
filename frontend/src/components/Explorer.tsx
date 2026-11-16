@@ -16,6 +16,7 @@ import { formatDec, formatRa, skyToPicture, type Field } from "../lib/sky";
 import {
   AsteroidSection, FlagSection, InspectSection, MoversSection, PhotometrySection, Section, ShareSection, Swatch, buttonClass, type AsteroidState,
 } from "./Panels";
+import { MoverSearch } from "./MoverSearch";
 import { MARK, SkyView } from "./SkyView";
 
 export interface Target {
@@ -411,6 +412,9 @@ export function Explorer(p: Props) {
           {overlay && step && <MoversSection data={overlay} t={step.t} onPick={(q) => setPicked(snap(q))} />}
           {showFlags && step && <FlagSection entry={flagId ? flagEntry : undefined} single={flagId !== null} />}
           {showRocks && rocks && <AsteroidSection state={rocks.state} here={rocksHere} />}
+          {steps.length > 0 && !p.embed && (p.live || API_BASE !== "") && (
+            <MoverSearch ra={p.target.ra} dec={p.target.dec} fov={p.target.fov} />
+          )}
           <ShareSection url={p.shareUrl} />
         </aside>
       </div>
