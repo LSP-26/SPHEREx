@@ -42,11 +42,9 @@ export function MoverSearch({ ra, dec, fov }: { ra: number; dec: number; fov: nu
 
   return (
     <Section title="Moving objects (experimental)">
-      <p className="mb-2 text-xs text-muted">
-        Looks in one visit for objects that move in a straight line between SPHEREx bursts, and checks them against known
-        asteroids and comets (SkyBoT). Anything it does not recognise is only a candidate, not a discovery.
-        {fov > MOVERS_MAX_FOV_ARCMIN && ` Searches the central ${MOVERS_MAX_FOV_ARCMIN}′.`}
-      </p>
+      {fov > MOVERS_MAX_FOV_ARCMIN && (
+        <p className="mb-2 text-xs text-muted">Searches the central {MOVERS_MAX_FOV_ARCMIN}′.</p>
+      )}
 
       {state.phase === "idle" && (
         <button type="button" className={buttonClass} onClick={() => run()}>Search for moving objects</button>
