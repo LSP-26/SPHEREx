@@ -75,7 +75,33 @@ export function Home({ showcases, onGo, problem }: { showcases: Showcase[]; onGo
         </section>
       </div>
 
-      <div className="mt-16 grid gap-10 border-t border-rule pt-8 leading-relaxed md:grid-cols-3 md:gap-8">
+      <div className="mt-16 grid gap-10 border-t border-rule pt-8 leading-relaxed lg:grid-cols-3 lg:gap-8">
+        <section className="space-y-3" aria-label="How to use">
+          <h2 className="text-lg font-semibold">How to use</h2>
+          <ol className="list-decimal space-y-2 pl-5 text-sm">
+            <li>
+              <span className="font-semibold">Search.</span> Type an object name or coordinates and a field of view, or open
+              one of the test targets.
+            </li>
+            <li>
+              <span className="font-semibold">Blink.</span> Press play, the arrow buttons or the space bar to step through the
+              frames, or click a date. Watch for anything that moves or changes brightness.
+            </li>
+            <li>
+              <span className="font-semibold">Choose a band.</span> D1 to D6 are the six detectors, each at its own
+              wavelength. Compare frames within one band. Colour combines all six.
+            </li>
+            <li>
+              <span className="font-semibold">Difference.</span> Switch the view to Difference (or press D) to cancel
+              everything that stays still. A mover leaves a white and a dark spot.
+            </li>
+            <li>
+              <span className="font-semibold">Identify.</span> Turn on the Gaia stars, known asteroids or flagged pixels.
+              Click a pixel for its coordinates, the nearest Gaia star and a light curve.
+            </li>
+          </ol>
+        </section>
+
         <section className="space-y-3" aria-label="Method">
           <h2 className="text-lg font-semibold">Method</h2>
           <ol className="list-decimal space-y-2 pl-5 text-sm">
@@ -96,19 +122,16 @@ export function Home({ showcases, onGo, problem }: { showcases: Showcase[]; onGo
           </ol>
         </section>
 
-        <section className="space-y-3 text-sm text-muted" aria-label="Limitations">
-          <h2 className="text-lg font-semibold text-ink">Data and limitations</h2>
-          <p>
-            Single frames are shallower than the final survey. Pixels are 6.15″, so motions below about 3″ per year are hard to
-            see by eye over the current baseline. Bright stars saturate. The colour view is false colour and not flux-calibrated.
-          </p>
-        </section>
-
         <section className="space-y-3" aria-label="About">
           <h2 className="text-lg font-semibold">About</h2>
           <p className="text-sm">
             SPHEREx maps the whole sky every six months at 0.75 to 5 µm. Pick a position and Tombaugh shows every frame of it
             in time order, one detector at a time, so anything that moves or varies stands out.
+          </p>
+          <p className="text-sm text-muted">
+            <span className="font-semibold text-ink">Limitations.</span> Single frames are shallower than the final survey.
+            Pixels are 6.15″, so motions below about 3″ per year are hard to see by eye over the current baseline. Bright
+            stars saturate. The colour view is false colour and not flux-calibrated.
           </p>
           <p className="text-sm text-muted">
             Named after Clyde Tombaugh, who found Pluto in 1930 by blinking photographic plates of the same field.

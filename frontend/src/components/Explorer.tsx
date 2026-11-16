@@ -365,11 +365,6 @@ export function Explorer(p: Props) {
               {formatRa(p.target.ra)} {formatDec(p.target.dec)} · {p.target.fov}′ field
             </p>
             {p.target.note && <p className="mt-1 text-xs text-muted">{p.target.note}</p>}
-            <p className="mt-2 leading-relaxed">
-              {p.example?.lookFor ??
-                "Step through the looks and watch for anything that shifts, appears or changes brightness. " +
-                "In Difference, unchanged sources cancel to grey and a mover leaves a white and black pair."}
-            </p>
           </div>
 
           {frame && step && (
